@@ -2,6 +2,13 @@ import Config
 
 # Configure your database
 config :architecture_generator, ArchitectureGenerator.Repo,
+  username: "postgres",
+  password: "postgres",
+  hostname: "localhost",
+  database: "architecture_generator_dev",
+  stacktrace: true,
+  show_sensitive_data_on_connection_error: true,
+  pool_size: 10
   database: Path.expand("../architecture_generator_dev.db", __DIR__),
   pool_size: 5,
   stacktrace: true,
