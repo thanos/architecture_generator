@@ -20,7 +20,5 @@ config :architecture_generator, Oban,
   plugins: [Oban.Plugins.Pruner],
   queues: [default: 10]
 
-  db: Memento
-
 # Configures the endpoint
 import_config "#{config_env()}.exs"
