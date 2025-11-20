@@ -11,12 +11,12 @@ into formalized IT Architectural Plans (APs) via LLM integration with a multi-st
 ## Implementation Steps
 
 ### Phase 1: Project Setup ✅
-- [x] Generate Phoenix app with SQLite
+- [x] Generate Phoenix app with PostgreSQL
 - [x] Create detailed plan.md
 - [x] Start development server
 
-### Phase 2: Database Schema & Migrations (3 steps)
-- [ ] Create migration for projects and architectural_plans tables
+### Phase 2: Database Schema & Migrations ✅
+- [x] Create migration for projects and architectural_plans tables
   - projects table fields:
     - name (string)
     - brd_content (text)
@@ -34,19 +34,19 @@ into formalized IT Architectural Plans (APs) via LLM integration with a multi-st
     - generated_at (naive_datetime)
     - timestamps
 
-- [ ] Create Project schema (lib/architecture_generator/projects/project.ex)
+- [x] Create Project schema (lib/architecture_generator/projects/project.ex)
   - Ecto schema with all fields
   - Status state machine validations
   - Changesets for each step transition
   - belongs_to :architectural_plan association
 
-- [ ] Create ArchitecturalPlan schema (lib/architecture_generator/plans/architectural_plan.ex)
+- [x] Create ArchitecturalPlan schema (lib/architecture_generator/plans/architectural_plan.ex)
   - Ecto schema with project relationship
   - has_one :project association
   - Validation for content presence
 
-### Phase 3: Core Context Modules (2 steps)
-- [ ] Create Projects context (lib/architecture_generator/projects.ex)
+### Phase 3: Core Context Modules ✅
+- [x] Create Projects context (lib/architecture_generator/projects.ex)
   - create_project/1
   - get_project!/1
   - update_project_status/2
@@ -54,21 +54,23 @@ into formalized IT Architectural Plans (APs) via LLM integration with a multi-st
   - save_tech_stack_config/2
   - list_projects/0
 
-- [ ] Create Plans context (lib/architecture_generator/plans.ex)
+- [x] Create Plans context (lib/architecture_generator/plans.ex)
   - create_architectural_plan/2
   - get_plan_by_project!/1
 
-### Phase 4: External Dependencies Setup (3 steps)
-- [ ] Add Oban dependency to mix.exs
+### Phase 4: External Dependencies Setup ✅
+- [x] Add Oban dependency to mix.exs
   - {:oban, "~> 2.18"}
   - Run mix deps.get
 
-- [ ] Configure Oban in application.ex supervision tree
+- [x] Configure Oban in application.ex supervision tree
   - Add Oban config to config/config.exs
   - Add Oban to children list in application.ex
 
-- [ ] Add file upload dependency
-  - Use Phoenix built-in upload handling
+- [x] Migrate from SQLite to PostgreSQL
+  - Configure PostgreSQL in dev.exs and test.exs
+  - Run Oban v11 migrations for oban_peers table
+  - Configure Bandit as HTTP adapter
 
 ### Phase 5: LiveView Multi-Step Flow (6 steps)
 - [ ] Create ProjectLive.Show module (lib/architecture_generator_web/live/project_live/show.ex)
@@ -156,20 +158,20 @@ into formalized IT Architectural Plans (APs) via LLM integration with a multi-st
   - Email template with project name and plan link
   - Use Swoosh to send email to project.user_email
 
-### Phase 9: UI Design & Polish (3 steps)
-- [ ] Replace home.html.heex with static design mockup
+### Phase 9: UI Design & Polish ✅
+- [x] Replace home.html.heex with static design mockup
   - Modern SaaS design with gradients
   - Hero section explaining the tool
   - Call-to-action to create first project
   - Feature highlights
 
-- [ ] Update app.css with Modern SaaS theme
+- [x] Update app.css with Modern SaaS theme
   - Vibrant gradient backgrounds
   - Sleek color palette (purples, blues, teals)
   - Smooth transitions and shadows
   - Glassmorphism effects
 
-- [ ] Update layouts (root.html.heex and Layouts.app)
+- [x] Update layouts (root.html.heex and Layouts.app)
   - Match Modern SaaS aesthetic
   - Clean navigation
   - Force light theme with vibrant accents
@@ -198,11 +200,10 @@ into formalized IT Architectural Plans (APs) via LLM integration with a multi-st
 
 ## Technical Notes
 
-### File Upload Handling
-- Use Phoenix.LiveView.allow_upload/3
-- Accept .txt, .md, .pdf, .docx files
-- Store uploaded files in priv/static/uploads
-- Save file path to brd_file_path
+### Database Configuration
+- **Production**: PostgreSQL with connection pooling
+- **Development**: PostgreSQL with 10 connections
+- **Test**: PostgreSQL with separate test database
 
 ### State Machine
 Project status transitions:
@@ -216,7 +217,7 @@ Initial → Elicitation → Tech_Stack_Input → Queued → Complete
 - Store API key in config/runtime.exs: GEMINI_API_KEY
 
 ### Oban Configuration
-- Use SQLite as queue storage
-- Max 5 concurrent jobs
+- Use PostgreSQL as queue storage
+- Max 10 concurrent jobs
 - Retry failed jobs 3 times with exponential backoff
-
+- Oban v11 with oban_peers table for distributed coordination
