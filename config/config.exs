@@ -14,8 +14,12 @@ config :architecture_generator,
 # Configures Swoosh API Client
 config :swoosh, :api_client, Swoosh.ApiClient.Finch
 
-# Configures Que for background jobs
-config :que,
+# Configures Oban for background jobs
+config :architecture_generator, Oban,
+  repo: ArchitectureGenerator.Repo,
+  plugins: [Oban.Plugins.Pruner],
+  queues: [default: 10]
+
   db: Memento
 
 # Configures the endpoint
