@@ -27,6 +27,12 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.Show do
   end
 
   @impl true
+  def handle_info({:refresh_project, project_id}, socket) do
+    project = Projects.get_project!(project_id)
+    {:noreply, assign(socket, :project, project)}
+  end
+
+  @impl true
   def render(assigns) do
     ~H"""
     <Layouts.app flash={@flash}>
