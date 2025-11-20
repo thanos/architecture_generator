@@ -2,7 +2,6 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.Show do
   use ArchitectureGeneratorWeb, :live_view
 
   alias ArchitectureGenerator.Projects
-  alias ArchitectureGenerator.Plans
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
