@@ -10,3 +10,6 @@ import Config
 config :architecture_generator,
   ecto_repos: [ArchitectureGenerator.Repo],
   generators: [timestamp_type: :utc_datetime]
+
+# Configures Swoosh API Client
+config :swoosh, :api_client, Swoosh.ApiClient.Finch
