@@ -12,6 +12,7 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.New do
       socket
       |> assign(:page_title, "Create New Project")
       |> assign(:changeset, changeset)
+      |> assign(:form, to_form(changeset))
 
     {:ok, socket}
   end
@@ -55,6 +56,7 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.New do
 
           <div class="bg-white/80 backdrop-blur-sm rounded-xl border border-violet-200 shadow-lg p-8">
             <.form
+              for={@form}
               for={@changeset}
               phx-change="validate"
               phx-submit="save"
@@ -67,7 +69,7 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.New do
                   Project Name
                 </label>
                 <.input
-                  field={@changeset[:name]}
+                  field={@form[:name]}
                   type="text"
                   placeholder="e.g., E-commerce Platform Redesign"
                   class="w-full px-4 py-3 rounded-lg bg-white text-slate-900 placeholder:text-slate-400 border-2 border-slate-200 focus:border-violet-400 focus:ring focus:ring-violet-200 focus:ring-opacity-50 transition-colors"
@@ -81,7 +83,7 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.New do
                   Your Email
                 </label>
                 <.input
-                  field={@changeset[:user_email]}
+                  field={@form[:user_email]}
                   type="email"
                   placeholder="you@example.com"
                   class="w-full px-4 py-3 rounded-lg bg-white text-slate-900 placeholder:text-slate-400 border-2 border-slate-200 focus:border-violet-400 focus:ring focus:ring-violet-200 focus:ring-opacity-50 transition-colors"
