@@ -13,3 +13,10 @@ config :architecture_generator,
 
 # Configures Swoosh API Client
 config :swoosh, :api_client, Swoosh.ApiClient.Finch
+
+# Configures Que for background jobs
+config :que,
+  db: Memento
+
+# Configures the endpoint
+import_config "#{config_env()}.exs"
