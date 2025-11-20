@@ -11,6 +11,10 @@ config :architecture_generator,
   ecto_repos: [ArchitectureGenerator.Repo],
   generators: [timestamp_type: :utc_datetime]
 
+# Configures the endpoint
+config :architecture_generator, ArchitectureGeneratorWeb.Endpoint,
+  live_view: [signing_salt: "GHmcIaf1ToZ6UQWl"]
+
 # Configures Swoosh API Client
 config :swoosh, :api_client, Swoosh.ApiClient.Finch
 
