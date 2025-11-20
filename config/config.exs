@@ -14,6 +14,7 @@ config :architecture_generator,
 # Configures Oban
 config :architecture_generator, Oban,
   repo: ArchitectureGenerator.Repo,
+  notifier: Oban.Notifiers.PG,
   plugins: [Oban.Plugins.Pruner],
   queues: [default: 5]
 
