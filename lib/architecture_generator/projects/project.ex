@@ -2,8 +2,6 @@ defmodule ArchitectureGenerator.Projects.Project do
   use Ecto.Schema
   import Ecto.Changeset
 
-  @valid_statuses ["Initial", "Elicitation", "Tech_Stack_Input", "Queued", "Complete", "Error"]
-
   schema "projects" do
     field :name, :string
     field :brd_content, :string
