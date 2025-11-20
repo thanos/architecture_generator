@@ -17,7 +17,6 @@ config :swoosh, :api_client, Swoosh.ApiClient.Finch
 # Configures Oban for background jobs
 config :architecture_generator, Oban,
   repo: ArchitectureGenerator.Repo,
-  notifier: Oban.Notifiers.Postgres,
   plugins: [Oban.Plugins.Pruner],
   queues: [default: 10]
 
