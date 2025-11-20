@@ -1,0 +1,42 @@
+@import "tailwindcss" source(none);
+@source "../css";
+@source "../js";
+@source "../../lib/architecture_generator_web";
+
+@plugin "../vendor/heroicons";
+
+@plugin "../vendor/daisyui-theme" {
+  name: "light";
+  default: true;
+  prefersdark: false;
+  color-scheme: "light";
+  --color-base-100: oklch(98% 0 0);
+  --color-base-200: oklch(96% 0.005 252);
+  --color-base-300: oklch(94% 0.01 252);
+  --color-primary: oklch(60% 0.25 277);
+  --color-secondary: oklch(65% 0.22 195);
+  --color-accent: oklch(70% 0.2 180);
+  --color-neutral: oklch(40% 0.02 252);
+  --color-info: oklch(65% 0.18 230);
+  --color-success: oklch(65% 0.18 145);
+  --color-warning: oklch(75% 0.18 85);
+  --color-error: oklch(60% 0.22 25);
+}
+
+@plugin "../vendor/daisyui" {
+  themes: false;
+}
+
+/* Custom gradient utilities */
+@layer utilities {
+  .bg-gradient-violet-cyan {
+    background: linear-gradient(135deg, #8b5cf6 0%, #06b6d4 100%);
+  }
+
+  .text-gradient-violet-cyan {
+    background: linear-gradient(135deg, #8b5cf6 0%, #06b6d4 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+}

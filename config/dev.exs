@@ -20,11 +20,10 @@ config :architecture_generator, ArchitectureGeneratorWeb.Endpoint,
   # Binding to loopback ipv4 address prevents access from other machines.
   # Change to `ip: {0, 0, 0, 0}` to allow access from other machines.
   http: [ip: {127, 0, 0, 1}, port: String.to_integer(System.get_env("PORT") || "4000")],
-  adapter: Bandit.PhoenixAdapter,
   check_origin: false,
   code_reloader: true,
   debug_errors: true,
-  secret_key_base: "/KHSvHO5p4AN0bFMGUzWgZcY/3JxHM38Z1EsGRWZ+ywJfDzhGSbNMXrpAzQlNcgU",
+  secret_key_base: "qgZNnlOW5OrjE2XxCOnYTduMLurCHE5p06lJCPx1OAAvS+xriQ2OsA86OI/dGz8G",
   watchers: [
     esbuild:
       {Esbuild, :install_and_run, [:architecture_generator, ~w(--sourcemap=inline --watch)]},
@@ -60,6 +59,7 @@ config :architecture_generator, ArchitectureGeneratorWeb.Endpoint,
     web_console_logger: true,
     patterns: [
       ~r"priv/static/(?!uploads/).*(js|css|png|jpeg|jpg|gif|svg)$",
+      ~r"priv/gettext/.*(po)$",
       ~r"lib/architecture_generator_web/(?:controllers|live|components|router)/?.*\.(ex|heex)$"
     ]
   ]
@@ -81,7 +81,7 @@ config :phoenix_live_view,
   # Include debug annotations and locations in rendered markup.
   # Changing this configuration will require mix clean and a full recompile.
   debug_heex_annotations: true,
-  debug_tags_location: true,
+  debug_attributes: true,
   # Enable helpful, but potentially expensive runtime checks
   enable_expensive_runtime_checks: true
 

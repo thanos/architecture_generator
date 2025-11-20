@@ -7,7 +7,7 @@ defmodule ArchitectureGeneratorWeb.Endpoint do
   @session_options [
     store: :cookie,
     key: "_architecture_generator_key",
-    signing_salt: "/wtnNJH5",
+    signing_salt: "w0TUIQNw",
     same_site: "Lax"
   ]
 
