@@ -11,6 +11,12 @@ config :architecture_generator,
   ecto_repos: [ArchitectureGenerator.Repo],
   generators: [timestamp_type: :utc_datetime]
 
+# Configures Oban
+config :architecture_generator, Oban,
+  repo: ArchitectureGenerator.Repo,
+  plugins: [Oban.Plugins.Pruner],
+  queues: [default: 5]
+
 # Configures the endpoint
 config :architecture_generator, ArchitectureGeneratorWeb.Endpoint,
   url: [host: "localhost"],
