@@ -11,9 +11,12 @@ defmodule ArchitectureGenerator.Application do
       ArchitectureGeneratorWeb.Telemetry,
       ArchitectureGenerator.Repo,
       {Ecto.Migrator,
-       repos: Application.fetch_env!(:architecture_generator, :ecto_repos), skip: skip_migrations?()},
-      {DNSCluster, query: Application.get_env(:architecture_generator, :dns_cluster_query) || :ignore},
+       repos: Application.fetch_env!(:architecture_generator, :ecto_repos),
+       skip: skip_migrations?()},
+      {DNSCluster,
+       query: Application.get_env(:architecture_generator, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: ArchitectureGenerator.PubSub},
+      {Oban, Application.fetch_env!(:architecture_generator, Oban)},
       # Start a worker by calling: ArchitectureGenerator.Worker.start_link(arg)
       # {ArchitectureGenerator.Worker, arg},
       # Start to serve requests, typically the last entry
