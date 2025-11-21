@@ -12,8 +12,7 @@ defmodule ArchitectureGenerator.Workers.PlanGenerationWorker do
   """
   use Oban.Worker, queue: :default, max_attempts: 3
 
-  alias ArchitectureGenerator.{Projects, Plans, Repo}
-  alias ArchitectureGenerator.Plans.ArchitecturalPlan
+  alias ArchitectureGenerator.{Projects, Plans}
 
   require Logger
 
