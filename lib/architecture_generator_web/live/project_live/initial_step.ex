@@ -7,8 +7,14 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.InitialStep do
   def update(assigns, socket) do
     {:ok,
      socket
-     # |> assign(assigns)
-     |> assign(:brd_text, assigns.project.brd_content || "")}
+     |> assign(assigns)
+     |> assign(:brd_text, assigns.project.brd_content || "")
+     |> allow_upload(:brd_file,
+       accept: ~w(.txt .md .pdf .doc .docx),
+       max_entries: 1,
+       max_file_size: 10_000_000,
+       auto_upload: true
+     )}
   end
 
   @impl true
@@ -17,10 +23,40 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.InitialStep do
   end
 
   @impl true
+  def handle_event("validate_upload", _params, socket) do
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("cancel_upload", %{"ref" => ref}, socket) do
+    {:noreply, cancel_upload(socket, :brd_file, ref)}
+  end
+
+  @impl true
   def handle_event("submit_brd", %{"brd_text" => brd_text}, socket) do
     project = socket.assigns.project
 
-    case Projects.update_brd_content(project, %{brd_content: brd_text}) do
+    # Handle file upload if present
+    uploaded_files =
+      consume_uploaded_entries(socket, :brd_file, fn %{path: path}, _entry ->
+        # Read file content
+        content = File.read!(path)
+        {:ok, content}
+      end)
+
+    # Combine text input with uploaded file content
+    final_brd_content =
+      case uploaded_files do
+        [file_content | _] when byte_size(file_content) > 0 ->
+          # If file was uploaded, use file content
+          file_content
+
+        _ ->
+          # Otherwise use text area content
+          brd_text
+      end
+
+    case Projects.update_brd_content(project, %{brd_content: final_brd_content}) do
       {:ok, updated_project} ->
         case Projects.update_project_status(updated_project, "Elicitation") do
           {:ok, _project} ->
@@ -73,24 +109,86 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.InitialStep do
             Minimum 100 characters recommended for meaningful analysis
           </p>
         </div>
-
-    <!-- File Upload Section (Optional) -->
+        
+    <!-- File Upload Section -->
         <div class="mb-6">
           <label class="block text-sm font-medium text-slate-700 mb-2">
-            Or Upload a Document (Optional)
+            Or Upload a Document
           </label>
-          <div class="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:border-violet-400 transition-colors">
-            <.icon name="hero-document-text" class="w-12 h-12 mx-auto text-slate-400 mb-2" />
-            <p class="text-sm text-slate-600 mb-1">Drag & drop or click to upload</p>
-            <p class="text-xs text-slate-500">Supports: .txt, .md, .pdf, .doc, .docx (max 10MB)</p>
-          </div>
-        </div>
 
+          <div
+            class="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:border-violet-400 transition-colors"
+            phx-drop-target={@uploads.brd_file.ref}
+          >
+            <.icon name="hero-document-text" class="w-12 h-12 mx-auto text-slate-400 mb-2" />
+
+            <label for={@uploads.brd_file.ref} class="cursor-pointer">
+              <p class="text-sm text-slate-600 mb-1">
+                Drag & drop or
+                <span class="text-violet-600 font-semibold hover:text-violet-700">
+                  click to upload
+                </span>
+              </p>
+              <p class="text-xs text-slate-500">Supports: .txt, .md, .pdf, .doc, .docx (max 10MB)</p>
+            </label>
+
+            <.live_file_input upload={@uploads.brd_file} class="hidden" />
+          </div>
+          
+    <!-- Upload Progress & Preview -->
+          <%= for entry <- @uploads.brd_file.entries do %>
+            <div class="mt-4 p-4 bg-violet-50 border border-violet-200 rounded-lg">
+              <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center gap-2">
+                  <.icon name="hero-document-text" class="w-5 h-5 text-violet-600" />
+                  <span class="text-sm font-medium text-slate-900">{entry.client_name}</span>
+                </div>
+                <button
+                  type="button"
+                  phx-click="cancel_upload"
+                  phx-value-ref={entry.ref}
+                  phx-target={@myself}
+                  class="text-slate-400 hover:text-red-600 transition-colors"
+                  aria-label="Cancel upload"
+                >
+                  <.icon name="hero-x-mark" class="w-5 h-5" />
+                </button>
+              </div>
+              
+    <!-- Progress Bar -->
+              <div class="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                <div
+                  class="bg-gradient-to-r from-violet-600 to-cyan-600 h-2 transition-all duration-300"
+                  style={"width: #{entry.progress}%"}
+                >
+                </div>
+              </div>
+              <p class="text-xs text-slate-600 mt-1">{entry.progress}% uploaded</p>
+              
+    <!-- Upload Errors -->
+              <%= for err <- upload_errors(@uploads.brd_file, entry) do %>
+                <p class="text-xs text-red-600 mt-2 flex items-center gap-1">
+                  <.icon name="hero-exclamation-circle" class="w-4 h-4" />
+                  {error_to_string(err)}
+                </p>
+              <% end %>
+            </div>
+          <% end %>
+          
+    <!-- General Upload Errors -->
+          <%= for err <- upload_errors(@uploads.brd_file) do %>
+            <p class="text-sm text-red-600 mt-2 flex items-center gap-1">
+              <.icon name="hero-exclamation-circle" class="w-4 h-4" />
+              {error_to_string(err)}
+            </p>
+          <% end %>
+        </div>
+        
     <!-- Submit Button -->
         <div class="flex items-center justify-end gap-4">
           <button
             type="submit"
-            disabled={String.length(@brd_text) < 50}
+            disabled={String.length(@brd_text) < 50 && @uploads.brd_file.entries == []}
             class="px-8 py-3 bg-gradient-to-r from-violet-600 to-cyan-600 text-white rounded-xl font-semibold hover:shadow-xl hover:shadow-violet-500/30 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none"
           >
             Continue to Elicitation
@@ -101,4 +199,10 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.InitialStep do
     </div>
     """
   end
+
+  # Convert upload errors to human-readable strings
+  defp error_to_string(:too_large), do: "File is too large (max 10MB)"
+  defp error_to_string(:not_accepted), do: "File type not accepted"
+  defp error_to_string(:too_many_files), do: "Only one file allowed"
+  defp error_to_string(:external_client_failure), do: "Upload failed, please try again"
 end
