@@ -9,7 +9,6 @@ defmodule ArchitectureGenerator.Workers.PlanGenerationWorker do
   4. Creates an ArchitecturalPlan record
   5. Updates the project status to "Complete"
   6. Sends notification email (future enhancement)
-  """
   use Oban.Worker, queue: :default, max_attempts: 3
 
   alias ArchitectureGenerator.{Projects, Plans, Repo}
@@ -26,7 +25,7 @@ defmodule ArchitectureGenerator.Workers.PlanGenerationWorker do
     # Validate project is in Queued status
     if project.status != "Queued" do
       Logger.warning("Project #{project_id} is not in Queued status, skipping")
-      return({:cancel, "Project not in Queued status"})
+      {:cancel, "Project not in Queued status"}
     end
 
     try do
@@ -57,11 +56,7 @@ defmodule ArchitectureGenerator.Workers.PlanGenerationWorker do
     end
   end
 
-  @doc """
-  Generates the architectural plan content based on project data.
 
-  For now, this is a placeholder that returns a structured plan.
-  In production, this would call an LLM API (OpenAI, Claude, etc.)
   """
   defp generate_plan(project) do
     """
