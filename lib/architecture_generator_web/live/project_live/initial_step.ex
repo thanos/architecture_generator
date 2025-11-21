@@ -7,7 +7,8 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.InitialStep do
   def update(assigns, socket) do
     {:ok,
      socket
-     |> assign(assigns)
+     |> assign(:project, assigns.project)
+     |> assign(:id, assigns.id)
      |> assign(:brd_text, assigns.project.brd_content || "")
      |> allow_upload(:brd_file,
        accept: ~w(.txt .md .pdf .doc .docx),
