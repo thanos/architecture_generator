@@ -9,6 +9,7 @@ defmodule ArchitectureGenerator.Workers.PlanGenerationWorker do
   4. Creates an ArchitecturalPlan record
   5. Updates the project status to "Complete"
   6. Sends notification email (future enhancement)
+  """
   use Oban.Worker, queue: :default, max_attempts: 3
 
   alias ArchitectureGenerator.{Projects, Plans, Repo}
@@ -56,8 +57,6 @@ defmodule ArchitectureGenerator.Workers.PlanGenerationWorker do
     end
   end
 
-
-  """
   defp generate_plan(project) do
     """
     # Architectural Plan for #{project.name}
