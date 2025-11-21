@@ -21,10 +21,20 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.TechStackStep do
 
   @impl true
   def handle_event("submit_stack", _params, socket) do
-    project = socket.assigns.project
-    tech_stack = socket.assigns.tech_stack
-
     case Projects.save_tech_stack_config(project, tech_stack) do
+      {:ok, updated_project} ->
+        # Enqueue the Oban job to generate the architectural plan
+        %{project_id: updated_project.id}
+        |> ArchitectureGenerator.Workers.PlanGenerationWorker.new()
+        |> Oban.insert()
+
+        send(self(), {:refresh_project, updated_project.id})
+        {:noreply, socket}
+
+      {:error, _changeset} ->
+        {:noreply, put_flash(socket, :error, "Failed to save tech stack configuration")}
+    end
+  end
       {:ok, _updated_project} ->
         send(self(), {:refresh_project, project.id})
         {:noreply, socket}
