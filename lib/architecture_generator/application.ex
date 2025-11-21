@@ -17,7 +17,6 @@ defmodule ArchitectureGenerator.Application do
        query: Application.get_env(:architecture_generator, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: ArchitectureGenerator.PubSub},
       {Oban, Application.fetch_env!(:architecture_generator, Oban)},
-      {Oban, Application.fetch_env!(:architecture_generator, Oban)},
       # Start a worker by calling: ArchitectureGenerator.Worker.start_link(arg)
       # {ArchitectureGenerator.Worker, arg},
       # Start to serve requests, typically the last entry
