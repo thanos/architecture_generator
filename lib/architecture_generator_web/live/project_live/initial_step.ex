@@ -7,7 +7,7 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.InitialStep do
   def update(assigns, socket) do
     {:ok,
      socket
-     |> assign(assigns)
+     # |> assign(assigns)
      |> assign(:brd_text, assigns.project.brd_content || "")}
   end
 
@@ -73,7 +73,7 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.InitialStep do
             Minimum 100 characters recommended for meaningful analysis
           </p>
         </div>
-        
+
     <!-- File Upload Section (Optional) -->
         <div class="mb-6">
           <label class="block text-sm font-medium text-slate-700 mb-2">
@@ -85,7 +85,7 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.InitialStep do
             <p class="text-xs text-slate-500">Supports: .txt, .md, .pdf, .doc, .docx (max 10MB)</p>
           </div>
         </div>
-        
+
     <!-- Submit Button -->
         <div class="flex items-center justify-end gap-4">
           <button

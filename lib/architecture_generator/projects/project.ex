@@ -25,7 +25,7 @@ defmodule ArchitectureGenerator.Projects.Project do
     |> cast(attrs, [:name, :user_email, :brd_content, :brd_file_path])
     |> validate_required([:name, :user_email])
     |> validate_format(:user_email, ~r/^[^\s]+@[^\s]+$/, message: "must be a valid email")
-    |> validate_brd_content()
+    # |> validate_brd_content()
     |> put_change(:status, "Initial")
   end
 

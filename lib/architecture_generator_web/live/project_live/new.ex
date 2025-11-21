@@ -37,7 +37,7 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.New do
          |> push_navigate(to: ~p"/projects/#{project.id}")}
 
       {:error, %Ecto.Changeset{} = changeset} ->
-        {:noreply, assign(socket, :changeset, changeset)}
+        {:noreply, assign(socket, :changeset, changeset)     |> put_flash(:error, "Failed to create the project")}
     end
   end
 
@@ -76,7 +76,7 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.New do
                   error_class="border-red-400 focus:border-red-500 focus:ring focus:ring-red-300"
                 />
               </div>
-              
+
     <!-- User Email -->
               <div>
                 <label for="user-email" class="block text-sm font-bold text-slate-900 mb-2">
@@ -93,7 +93,7 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.New do
                   We'll send you a notification when your architectural plan is ready.
                 </p>
               </div>
-              
+
     <!-- Submit Button -->
               <div class="flex items-center justify-between pt-4">
                 <.link
