@@ -6,6 +6,7 @@ defmodule ArchitectureGenerator.Uploads do
   import Ecto.Query, warn: false
   alias ArchitectureGenerator.Repo
   alias ArchitectureGenerator.Uploads.{Upload, UploadVersion}
+  alias ArchitectureGenerator.DocumentParser
   alias ExAws.S3
 
   @bucket Application.compile_env(:architecture_generator, :uploads_bucket)
@@ -74,11 +75,14 @@ defmodule ArchitectureGenerator.Uploads do
 
   @doc """
   Creates an upload and stores the file in S3.
+  Also attempts to parse the file and extract text content.
+
+  Returns {:ok, upload, parsed_content} or {:ok, upload, nil} if parsing fails.
 
   ## Examples
 
       iex> create_upload(%{field: value}, file_path)
-      {:ok, %Upload{}}
+      {:ok, %Upload{}, "Extracted text content"}
 
       iex> create_upload(%{field: bad_value}, file_path)
       {:error, %Ecto.Changeset{}}
@@ -93,6 +97,13 @@ defmodule ArchitectureGenerator.Uploads do
            ),
          {:ok, _} <-
            upload_to_storage(s3_key, file_binary, attrs[:content_type] || attrs["content_type"]) do
+      # Try to parse the document and extract text
+      parsed_content =
+        case DocumentParser.parse_file(file_path) do
+          {:ok, content} -> content
+          {:error, _reason} -> nil
+        end
+
       # Create the upload record
       upload_attrs =
         Map.merge(attrs, %{
@@ -116,7 +127,7 @@ defmodule ArchitectureGenerator.Uploads do
             uploaded_by: attrs[:uploaded_by] || attrs["uploaded_by"]
           })
 
-          {:ok, Repo.preload(upload, :versions)}
+          {:ok, Repo.preload(upload, :versions), parsed_content}
 
         {:error, changeset} ->
           # Cleanup storage if DB insert fails
@@ -130,6 +141,9 @@ defmodule ArchitectureGenerator.Uploads do
 
   @doc """
   Updates an upload by creating a new version.
+  Also attempts to parse the new file and extract text content.
+
+  Returns {:ok, upload, parsed_content} or {:ok, upload, nil} if parsing fails.
   """
   def update_upload(upload, file_path, attrs \\ %{}) do
     with {:ok, file_binary} <- File.read(file_path),
@@ -145,6 +159,13 @@ defmodule ArchitectureGenerator.Uploads do
              file_binary,
              attrs[:content_type] || attrs["content_type"] || upload.content_type
            ) do
+      # Try to parse the document and extract text
+      parsed_content =
+        case DocumentParser.parse_file(file_path) do
+          {:ok, content} -> content
+          {:error, _reason} -> nil
+        end
+
       # Create new version
       version_attrs = %{
         upload_id: upload.id,
@@ -164,8 +185,11 @@ defmodule ArchitectureGenerator.Uploads do
           |> Upload.update_version_changeset(next_version)
           |> Repo.update()
           |> case do
-            {:ok, updated_upload} -> {:ok, Repo.preload(updated_upload, :versions, force: true)}
-            error -> error
+            {:ok, updated_upload} ->
+              {:ok, Repo.preload(updated_upload, :versions, force: true), parsed_content}
+
+            error ->
+              error
           end
 
         error ->
