@@ -60,7 +60,7 @@ defmodule ArchitectureGenerator.LLMService do
 
     case ReqLLM.generate_text(model_spec, messages, temperature: 0.7, max_tokens: 4000) do
       {:ok, %ReqLLM.Response{message: message}} ->
-        content = ReqLLM.Message.get_text(message)
+        content = extract_text_from_message(message)
         Logger.info("Successfully generated BRD from LLM")
         {:ok, content}
 
