@@ -87,10 +87,3 @@ config :phoenix_live_view,
 
 # Disable swoosh api client as it is only required for production adapters.
 config :swoosh, :api_client, false
-
-# Local file storage configuration (no S3 needed for dev)
-config :architecture_generator, :file_storage, :local
-config :architecture_generator, :uploads_dir, "priv/static/uploads"
-
-# S3 bucket name for uploads
-config :architecture_generator, :uploads_bucket, "architecture-generator-uploads"
