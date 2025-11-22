@@ -87,3 +87,22 @@ config :phoenix_live_view,
 
 # Disable swoosh api client as it is only required for production adapters.
 config :swoosh, :api_client, false
+
+# Configure ExAws for S3 Ninja (local S3-compatible server)
+config :ex_aws,
+  access_key_id: "AKIAIOSFODNN7EXAMPLE",
+  secret_access_key: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+  region: "us-east-1",
+  s3: [
+    scheme: "http://",
+    host: "localhost",
+    port: 9444,
+    region: "us-east-1"
+  ]
+
+config :ex_aws, :hackney_opts,
+  recv_timeout: 30_000,
+  pool: false
+
+# S3 bucket name for uploads
+config :architecture_generator, :uploads_bucket, "architecture-generator-uploads"
