@@ -57,6 +57,7 @@ defmodule ArchitectureGenerator.LLMService do
 
   defp call_llm(model_spec, messages) do
     Logger.info("Calling LLM with model: #{inspect(model_spec)}")
+    ReqLLM.put_key(:openai_api_key, System.fetch_env!("OPENAI_API_KEY"))
 
     case ReqLLM.generate_text(model_spec, messages, temperature: 0.7, max_tokens: 4000) do
       {:ok, content} when is_binary(content) ->
