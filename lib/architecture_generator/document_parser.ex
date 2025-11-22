@@ -190,9 +190,6 @@ defmodule ArchitectureGenerator.DocumentParser do
     end
   end
 
-  @doc """
-  Cleans extracted text by removing excessive whitespace and normalizing.
-  """
   defp clean_text(text) when is_binary(text) do
     text
     |> String.trim()
