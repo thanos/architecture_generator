@@ -73,7 +73,7 @@ defmodule ArchitectureGenerator.MixProject do
       {:hackney, "~> 1.20"},
       {:pdf, "~> 0.6"},
       {:elixir_xml_to_map, "~> 3.0"},
-      {:openai, "~> 0.6"}
+      {:req_llm, "~> 0.4"}
     ]
   end
 
