@@ -1,7 +1,7 @@
 defmodule ArchitectureGeneratorWeb.ProjectLive.InitialStep do
   use ArchitectureGeneratorWeb, :live_component
 
-  alias ArchitectureGenerator.Projects
+  alias ArchitectureGenerator.{Projects, Uploads}
 
   @impl true
   def update(assigns, socket) do
@@ -37,19 +37,35 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.InitialStep do
   def handle_event("submit_brd", %{"brd_text" => brd_text}, socket) do
     project = socket.assigns.project
 
-    # Handle file upload if present
-    uploaded_files =
-      consume_uploaded_entries(socket, :brd_file, fn %{path: path}, _entry ->
-        # Read file content
-        content = File.read!(path)
-        {:ok, content}
+    # Handle file upload if present - store in S3 via Uploads context
+    result =
+      consume_uploaded_entries(socket, :brd_file, fn %{path: path}, entry ->
+        # Create upload record and store file in S3
+        case Uploads.create_upload(
+               %{
+                 project_id: project.id,
+                 filename: entry.client_name,
+                 content_type: entry.client_type,
+                 size_bytes: entry.client_size,
+                 uploaded_by: project.user_email
+               },
+               path
+             ) do
+          {:ok, upload} ->
+            # Read file content for BRD processing
+            {:ok, content} = File.read(path)
+            {:ok, {upload, content}}
+
+          {:error, reason} ->
+            {:postpone, reason}
+        end
       end)
 
-    # Combine text input with uploaded file content
+    # Determine final BRD content
     final_brd_content =
-      case uploaded_files do
-        [file_content | _] when byte_size(file_content) > 0 ->
-          # If file was uploaded, use file content
+      case result do
+        [{_upload, file_content} | _] when byte_size(file_content) > 0 ->
+          # If file was uploaded successfully, use file content
           file_content
 
         _ ->
@@ -57,6 +73,7 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.InitialStep do
           brd_text
       end
 
+    # Update project with BRD content
     case Projects.update_brd_content(project, %{brd_content: final_brd_content}) do
       {:ok, updated_project} ->
         case Projects.update_project_status(updated_project, "Elicitation") do
