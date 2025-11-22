@@ -70,10 +70,9 @@ defmodule ArchitectureGenerator.MixProject do
       {:ex_aws, "~> 2.5"},
       {:ex_aws_s3, "~> 2.5"},
       {:sweet_xml, "~> 0.7"},
-      # Added missing comma here
       {:hackney, "~> 1.20"},
       {:pdf, "~> 0.6"},
-      {:elixir_xml_to_map, "~> 3.0"}
+      {:elixir_xml_to_map, "~> 3.0"},
       {:openai, "~> 0.6"}
     ]
   end
