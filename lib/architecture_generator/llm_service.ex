@@ -14,7 +14,7 @@ defmodule ArchitectureGenerator.LLMService do
   Returns {:ok, brd_content} or {:error, reason}
   """
   def convert_document_to_brd(file_content, filename, opts \\ []) do
-    provider = Keyword.get(opts, :provider, "openai")
+    provider = Keyword.get(opts, :provider, :openai)
     model_spec = build_model_spec(provider)
 
     prompt = build_conversion_prompt(filename)
@@ -39,7 +39,7 @@ defmodule ArchitectureGenerator.LLMService do
   Returns {:ok, brd_content} or {:error, reason}
   """
   def enhance_parsed_text(parsed_text, opts \\ []) do
-    provider = Keyword.get(opts, :provider, "openai")
+    provider = Keyword.get(opts, :provider, :openai)
     model_spec = build_model_spec(provider)
 
     prompt = build_enhancement_prompt()
@@ -52,8 +52,9 @@ defmodule ArchitectureGenerator.LLMService do
     call_llm(model_spec, messages)
   end
 
-  defp build_model_spec("openai"), do: "openai:gpt-4o-mini"
-  defp build_model_spec(provider), do: "#{provider}:default"
+  defp build_model_spec(:openai), do: "openai:gpt-4o-mini"
+  defp build_model_spec(provider) when is_atom(provider), do: "#{provider}:default"
+  defp build_model_spec(provider) when is_binary(provider), do: "#{provider}:default"
 
   defp call_llm(model_spec, messages) do
     Logger.info("Calling LLM with model: #{inspect(model_spec)}")
@@ -77,6 +78,22 @@ defmodule ArchitectureGenerator.LLMService do
       Logger.error("Exception calling LLM: #{inspect(error)}")
       {:error, {:exception, error}}
   end
+
+  defp extract_text_from_message(%ReqLLM.Message{content: content}) when is_list(content) do
+    content
+    |> Enum.map(fn
+      %{text: text} -> text
+      %{"text" => text} -> text
+      _ -> ""
+    end)
+    |> Enum.join("\n")
+  end
+
+  defp extract_text_from_message(%ReqLLM.Message{content: content}) when is_binary(content) do
+    content
+  end
+
+  defp extract_text_from_message(_), do: ""
 
   defp build_conversion_prompt(filename) do
     """
