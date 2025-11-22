@@ -3,7 +3,6 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.InitialStep do
 
   alias ArchitectureGenerator.{Projects, Uploads}
 
-  @impl true
   def update(assigns, socket) do
     {:ok,
      socket
@@ -20,22 +19,18 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.InitialStep do
      )}
   end
 
-  @impl true
   def handle_event("validate_brd", %{"brd_text" => brd_text}, socket) do
     {:noreply, assign(socket, :brd_text, brd_text)}
   end
 
-  @impl true
   def handle_event("validate_upload", _params, socket) do
     {:noreply, socket}
   end
 
-  @impl true
   def handle_event("cancel_upload", %{"ref" => ref}, socket) do
     {:noreply, cancel_upload(socket, :brd_file, ref)}
   end
 
-  @impl true
   def handle_event("submit_brd", %{"brd_text" => brd_text}, socket) do
     project = socket.assigns.project
 
@@ -119,17 +114,14 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.InitialStep do
     end
   end
 
-  @impl true
   def handle_info({:update_parsing_status, status}, socket) do
     {:noreply, assign(socket, :parsing_status, status)}
   end
 
-  @impl true
   def handle_info({:show_content_preview, preview}, socket) do
     {:noreply, assign(socket, :parsed_content_preview, preview)}
   end
 
-  @impl true
   def render(assigns) do
     ~H"""
     <div class="bg-white/80 backdrop-blur-sm rounded-xl border border-violet-200 shadow-lg p-8">
