@@ -53,8 +53,8 @@ defmodule ArchitectureGenerator.LLMService do
   end
 
   defp build_model_spec(:openai), do: "openai:gpt-4o-mini"
-  defp build_model_spec(provider) when is_atom(provider), do: "#{provider}:default"
-  defp build_model_spec(provider) when is_binary(provider), do: "#{provider}:default"
+  defp build_model_spec(provider) when is_atom(provider), do: "#{provider}:gpt-4o-mini"
+  defp build_model_spec(provider) when is_binary(provider), do: "#{provider}:gpt-4o-mini"
 
   defp call_llm(model_spec, messages) do
     Logger.info("Calling LLM with model: #{inspect(model_spec)}")
