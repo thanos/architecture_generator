@@ -9,6 +9,12 @@ defmodule ArchitectureGenerator.Uploads do
   alias ExAws.S3
 
   @bucket Application.compile_env(:architecture_generator, :uploads_bucket)
+  @storage_type Application.compile_env(:architecture_generator, :file_storage, :s3)
+  @uploads_dir Application.compile_env(
+                 :architecture_generator,
+                 :uploads_dir,
+                 "priv/static/uploads"
+               )
 
   @doc """
   Returns the list of uploads.
@@ -86,7 +92,7 @@ defmodule ArchitectureGenerator.Uploads do
              attrs[:filename] || attrs["filename"]
            ),
          {:ok, _} <-
-           upload_to_s3(s3_key, file_binary, attrs[:content_type] || attrs["content_type"]) do
+           upload_to_storage(s3_key, file_binary, attrs[:content_type] || attrs["content_type"]) do
       # Create the upload record
       upload_attrs =
         Map.merge(attrs, %{
@@ -113,8 +119,8 @@ defmodule ArchitectureGenerator.Uploads do
           {:ok, Repo.preload(upload, :versions)}
 
         {:error, changeset} ->
-          # Cleanup S3 if DB insert fails
-          delete_from_s3(s3_key)
+          # Cleanup storage if DB insert fails
+          delete_from_storage(s3_key)
           {:error, changeset}
       end
     else
@@ -134,7 +140,7 @@ defmodule ArchitectureGenerator.Uploads do
              attrs[:filename] || attrs["filename"] || upload.filename
            ),
          {:ok, _} <-
-           upload_to_s3(
+           upload_to_storage(
              s3_key,
              file_binary,
              attrs[:content_type] || attrs["content_type"] || upload.content_type
@@ -163,7 +169,7 @@ defmodule ArchitectureGenerator.Uploads do
           end
 
         error ->
-          delete_from_s3(s3_key)
+          delete_from_storage(s3_key)
           error
       end
     else
@@ -175,15 +181,15 @@ defmodule ArchitectureGenerator.Uploads do
   Deletes an upload and all its versions from S3 and database.
   """
   def delete_upload(%Upload{} = upload) do
-    # Delete all versions from S3
+    # Delete all versions from storage
     upload = Repo.preload(upload, :versions)
 
     Enum.each(upload.versions, fn version ->
-      delete_from_s3(version.s3_key)
+      delete_from_storage(version.s3_key)
     end)
 
-    # Delete current file from S3
-    delete_from_s3(upload.s3_key)
+    # Delete current file from storage
+    delete_from_storage(upload.s3_key)
 
     # Delete from database (cascade will handle versions)
     Repo.delete(upload)
@@ -195,6 +201,50 @@ defmodule ArchitectureGenerator.Uploads do
     |> Repo.insert()
   end
 
+  defp upload_to_storage(key, binary, content_type) do
+    case @storage_type do
+      :local ->
+        upload_to_local(key, binary)
+
+      :s3 ->
+        upload_to_s3(key, binary, content_type)
+    end
+  end
+
+  defp delete_from_storage(key) do
+    case @storage_type do
+      :local ->
+        delete_from_local(key)
+
+      :s3 ->
+        delete_from_s3(key)
+    end
+  end
+
+  # Local file storage operations
+  defp upload_to_local(key, binary) do
+    file_path = Path.join(@uploads_dir, key)
+    file_dir = Path.dirname(file_path)
+
+    with :ok <- File.mkdir_p(file_dir),
+         :ok <- File.write(file_path, binary) do
+      {:ok, :local}
+    else
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp delete_from_local(key) do
+    file_path = Path.join(@uploads_dir, key)
+
+    case File.rm(file_path) do
+      :ok -> {:ok, :local}
+      {:error, :enoent} -> {:ok, :local}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  # S3 operations
   defp upload_to_s3(key, binary, content_type) do
     S3.put_object(@bucket, key, binary, content_type: content_type || "application/octet-stream")
     |> ExAws.request()
@@ -209,19 +259,33 @@ defmodule ArchitectureGenerator.Uploads do
   Gets a presigned URL for downloading a file from S3.
   """
   def get_download_url(upload) do
-    {:ok, url} =
-      S3.presigned_url(ExAws.Config.new(:s3), :get, @bucket, upload.s3_key, expires_in: 3600)
+    case @storage_type do
+      :local ->
+        # Return a path to the static file
+        "/uploads/#{upload.s3_key}"
 
-    url
+      :s3 ->
+        {:ok, url} =
+          S3.presigned_url(ExAws.Config.new(:s3), :get, @bucket, upload.s3_key, expires_in: 3600)
+
+        url
+    end
   end
 
   @doc """
   Gets a presigned URL for a specific version.
   """
   def get_version_download_url(version) do
-    {:ok, url} =
-      S3.presigned_url(ExAws.Config.new(:s3), :get, @bucket, version.s3_key, expires_in: 3600)
+    case @storage_type do
+      :local ->
+        # Return a path to the static file
+        "/uploads/#{version.s3_key}"
 
-    url
+      :s3 ->
+        {:ok, url} =
+          S3.presigned_url(ExAws.Config.new(:s3), :get, @bucket, version.s3_key, expires_in: 3600)
+
+        url
+    end
   end
 end
