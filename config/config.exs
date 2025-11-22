@@ -66,7 +66,7 @@ config :swoosh, :api_client, Swoosh.ApiClient.Finch
 # Configures Oban for background jobs
 
 # File storage configuration (compile-time)
-config :architecture_generator, :file_storage, :s3
+config :architecture_generator, :file_storage, :local
 config :architecture_generator, :uploads_bucket, "architecture-generator-uploads"
 
 config :architecture_generator, Oban,
