@@ -1,73 +1,182 @@
 defmodule ArchitectureGenerator.Workers.PlanGenerationWorker do
   @moduledoc """
-  Oban worker that processes queued projects and generates architectural plans.
+  Oban worker that processes queued projects and generates architectural plans using LLM.
 
   This worker:
   1. Receives a project_id from the queue
   2. Fetches the project with BRD content, elicitation data, and tech stack config
-  3. Calls an LLM service to generate the architectural plan
+  3. Calls LLM service to generate the architectural plan
   4. Creates an ArchitecturalPlan record
   5. Updates the project status to "Complete"
   6. Sends notification email (future enhancement)
   """
   use Oban.Worker, queue: :default, max_attempts: 3
 
-  alias ArchitectureGenerator.{Projects, Plans}
+  alias ArchitectureGenerator.{Projects, Plans, LLMService}
 
   require Logger
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"project_id" => project_id}}) do
-    Logger.info("Starting plan generation for project #{project_id}")
+    Logger.info("Starting LLM-based plan generation for project #{project_id}")
 
     project = Projects.get_project!(project_id)
 
-    # Validate project is in Queued status
     if project.status != "Queued" do
       Logger.warning("Project #{project_id} is not in Queued status, skipping")
       {:cancel, "Project not in Queued status"}
     end
 
     try do
-      # Generate the architectural plan
-      plan_content = generate_plan(project)
+      plan_content = generate_plan_with_llm(project)
 
-      # Create the architectural plan record
       {:ok, architectural_plan} =
         Plans.create_architectural_plan(%{
           content: plan_content,
           project_id: project.id
         })
 
-      # Update project to Complete status
       {:ok, _project} = Projects.complete_project(project, architectural_plan.id)
 
-      Logger.info("Successfully generated plan for project #{project_id}")
+      Logger.info("Successfully generated LLM-based plan for project #{project_id}")
 
       {:ok, %{architectural_plan_id: architectural_plan.id}}
     rescue
       error ->
         Logger.error("Failed to generate plan for project #{project_id}: #{inspect(error)}")
 
-        # Mark project as error
         Projects.mark_project_error(project)
 
         {:error, error}
     end
   end
 
-  defp generate_plan(project) do
+  defp generate_plan_with_llm(project) do
+    prompt = build_architect_prompt(project)
+
+    context = """
+    # Business Requirements Document
+    #{project.brd_content || "No BRD provided"}
+
+    # Technical Elicitation Data
+    #{format_elicitation_data(project.elicitation_data)}
+
+    # Technology Stack Configuration
+    #{format_tech_stack(project.tech_stack_config)}
+    """
+
+    case LLMService.enhance_parsed_text(context, provider: :openai) do
+      {:ok, plan_content} ->
+        plan_content
+
+      {:error, reason} ->
+        Logger.warning(
+          "LLM generation failed for project #{project.id}, using fallback: #{inspect(reason)}"
+        )
+
+        generate_fallback_plan(project)
+    end
+  end
+
+  defp build_architect_prompt do
+    """
+    You are a senior software architect with extensive experience designing scalable, 
+    secure, and maintainable software systems.
+
+    Based on the project information provided below, create a comprehensive Architectural Plan 
+    in Markdown format that includes:
+
+    1. **Executive Summary** (2-3 paragraphs)
+       - Project overview and key objectives
+       - Critical architectural decisions
+       - Expected outcomes
+
+    2. **System Architecture Overview**
+       - High-level architecture pattern (monolith, microservices, etc.)
+       - Major components and their responsibilities
+       - Data flow between components
+
+    3. **Technology Stack Justification**
+       - Why each chosen technology fits the requirements
+       - Key trade-offs and considerations
+       - How they work together
+
+    4. **Scalability & Performance Strategy**
+       - How the system will handle expected load
+       - Caching strategies (CDN, application, database)
+       - Database optimization approaches
+       - Load balancing and auto-scaling plans
+
+    5. **Security Architecture**
+       - Authentication and authorization approach
+       - Data encryption (in transit and at rest)
+       - Compliance requirements implementation
+       - API security measures
+
+    6. **Integration Architecture**
+       - Third-party service integration patterns
+       - API design approach
+       - Error handling and retry logic
+       - Circuit breakers and fallbacks
+
+    7. **Data Architecture**
+       - Database schema design approach
+       - Data modeling strategy
+       - Backup and disaster recovery
+       - Data retention and archival
+
+    8. **Deployment Architecture**
+       - CI/CD pipeline design
+       - Environment strategy (dev/staging/prod)
+       - Monitoring and observability
+       - Logging and alerting
+
+    9. **Development Workflow**
+       - Recommended project structure
+       - Testing strategy (unit, integration, e2e)
+       - Code quality and review process
+
+    10. **Risk Assessment & Mitigation**
+        - Identified technical risks
+        - Mitigation strategies
+        - Contingency plans
+
+    11. **Implementation Phases**
+        - Phase 1: MVP/Core features with timeline
+        - Phase 2: Enhanced features with timeline
+        - Phase 3: Optimization and scaling with timeline
+
+    12. **Success Metrics**
+        - KPIs to measure system success
+        - Performance benchmarks
+        - User experience metrics
+
+    Be specific and professional. Provide concrete recommendations based on industry 
+    best practices and the specific requirements provided. Use proper Markdown formatting 
+    with headers, lists, and code blocks where appropriate.
+
+    The plan should be detailed enough for a development team to begin implementation 
+    with clear guidance on architectural decisions.
+    """
+  end
+
+  defp generate_fallback_plan(project) do
     """
     # Architectural Plan for #{project.name}
 
-    ## Project Overview
     **Generated on:** #{DateTime.utc_now() |> DateTime.to_string()}
-    **Status:** Complete
+    **Status:** Complete (Fallback Mode - LLM unavailable)
+
+    ## Executive Summary
+
+    This architectural plan provides a foundation for implementing #{project.name}. 
+    Due to temporary LLM unavailability, this plan uses a standard template. 
+    Please review and enhance with project-specific details.
 
     ## Business Requirements Summary
     #{format_brd_summary(project.brd_content)}
 
-    ## Elicitation Analysis
+    ## Technical Elicitation Analysis
     #{format_elicitation_data(project.elicitation_data)}
 
     ## Technology Stack
@@ -76,32 +185,33 @@ defmodule ArchitectureGenerator.Workers.PlanGenerationWorker do
     ## Recommended Architecture
 
     ### High-Level Architecture
-    Based on the requirements and technology choices, we recommend a microservices architecture with the following components:
+    Based on the requirements and technology choices, we recommend a standard web application 
+    architecture with the following components:
 
     1. **Frontend Layer**
-       - Technology: #{Map.get(project.tech_stack_config, "framework", "React/Vue.js")}
+       - Technology: #{Map.get(project.tech_stack_config, "web_framework", "Modern Web Framework")}
        - Deployment: CDN with edge caching
-       - State Management: Redux/Vuex
+       - State Management: Context-based or global state
 
     2. **API Gateway**
-       - Technology: #{Map.get(project.tech_stack_config, "language", "Node.js")} with Express/Fastify
-       - Authentication: JWT-based auth
-       - Rate Limiting: Redis-based
+       - Technology: #{Map.get(project.tech_stack_config, "primary_language", "Selected Language")} with framework
+       - Authentication: JWT-based or session-based auth
+       - Rate Limiting: Token bucket algorithm
 
     3. **Application Services**
-       - Primary Language: #{Map.get(project.tech_stack_config, "language", "Python")}
-       - Framework: #{Map.get(project.tech_stack_config, "framework", "FastAPI/Django")}
-       - Communication: REST APIs + Message Queue
+       - Primary Language: #{Map.get(project.tech_stack_config, "primary_language", "Selected Language")}
+       - Framework: #{Map.get(project.tech_stack_config, "web_framework", "Selected Framework")}
+       - Communication: REST APIs + Background Jobs
 
     4. **Data Layer**
-       - Primary Database: #{Map.get(project.tech_stack_config, "database", "PostgreSQL")}
-       - Caching: Redis
-       - Search: Elasticsearch (if needed)
+       - Primary Database: #{Map.get(project.tech_stack_config, "database_system", "Selected Database")}
+       - Caching: Redis or in-memory cache
+       - Search: Full-text search if needed
 
     5. **Infrastructure**
-       - Platform: #{Map.get(project.tech_stack_config, "deployment", "AWS/GCP")}
-       - Container Orchestration: Kubernetes
-       - CI/CD: GitHub Actions + ArgoCD
+       - Platform: #{Map.get(project.tech_stack_config, "deployment_env", "Selected Platform")}
+       - Container Orchestration: Docker-based deployment
+       - CI/CD: Automated pipeline with testing gates
 
     ### Scalability Considerations
     #{format_scalability_recommendations(project.elicitation_data)}
@@ -120,7 +230,7 @@ defmodule ArchitectureGenerator.Workers.PlanGenerationWorker do
     5. Establish monitoring and observability
 
     ---
-    *This is an AI-generated architectural plan. Please review and adjust based on your specific needs.*
+    *This is a fallback architectural plan. Consider regenerating with LLM for more detailed analysis.*
     """
   end
 
@@ -150,18 +260,20 @@ defmodule ArchitectureGenerator.Workers.PlanGenerationWorker do
 
   defp format_tech_stack(config) when is_map(config) and map_size(config) > 0 do
     """
-    - **Primary Language**: #{Map.get(config, "language", "Not specified")}
-    - **Framework**: #{Map.get(config, "framework", "Not specified")}
-    - **Database**: #{Map.get(config, "database", "Not specified")}
-    - **Deployment**: #{Map.get(config, "deployment", "Not specified")}
+    - **Primary Language**: #{Map.get(config, "primary_language", "Not specified")}
+    - **Framework**: #{Map.get(config, "web_framework", "Not specified")}
+    - **Database**: #{Map.get(config, "database_system", "Not specified")}
+    - **Deployment**: #{Map.get(config, "deployment_env", "Not specified")}
     """
   end
 
   defp format_tech_stack(_), do: "*No tech stack configuration provided*"
 
   defp format_scalability_recommendations(elicitation_data) do
-    concurrent_users = Map.get(elicitation_data, "Expected number of concurrent users", "unknown")
-    data_volume = Map.get(elicitation_data, "Expected data volume", "unknown")
+    concurrent_users =
+      Map.get(elicitation_data, "expected_users", "unknown")
+
+    data_volume = Map.get(elicitation_data, "data_volume", "unknown")
 
     """
     - **Expected Load**: #{concurrent_users} concurrent users
@@ -173,7 +285,8 @@ defmodule ArchitectureGenerator.Workers.PlanGenerationWorker do
   end
 
   defp format_security_recommendations(elicitation_data) do
-    security_reqs = Map.get(elicitation_data, "Security and compliance requirements", "standard")
+    security_reqs =
+      Map.get(elicitation_data, "security_compliance", "standard")
 
     """
     - **Security Requirements**: #{security_reqs}
@@ -185,7 +298,8 @@ defmodule ArchitectureGenerator.Workers.PlanGenerationWorker do
   end
 
   defp format_integration_recommendations(elicitation_data) do
-    integrations = Map.get(elicitation_data, "Third-party integrations needed", "none")
+    integrations =
+      Map.get(elicitation_data, "integration_requirements", "none")
 
     """
     - **Required Integrations**: #{integrations}
