@@ -106,24 +106,26 @@ defmodule ArchitectureGenerator.DocumentParser do
   end
 
   defp extract_text_from_docx_map(map) when is_map(map) do
-    # Look for text content in "w:t" keys
-    text_content = Map.get(map, "w:t", "")
+    # Recursively extract all text from the map structure
+    map
+    |> Enum.flat_map(fn
+      # Handle "w:t" text nodes - these contain the actual text
+      {"w:t", text} when is_binary(text) ->
+        [text]
 
-    # Also recursively process all values
-    nested_text =
-      map
-      |> Map.values()
-      |> Enum.map(&extract_text_from_docx_map/1)
-      |> Enum.join(" ")
+      # Handle "w:t" with nested #content structure
+      {"w:t", %{"#content" => content}} when is_binary(content) ->
+        [content]
 
-    # Combine direct text with nested text
-    case text_content do
-      "" -> nested_text
-      content when is_binary(content) -> content <> " " <> nested_text
-      # Handle when w:t has nested structure with #content
-      %{"#content" => content} when is_binary(content) -> content <> " " <> nested_text
-      _ -> nested_text
-    end
+      # Handle "#content" keys that point to nested structures
+      {"#content", content} ->
+        [extract_text_from_docx_map(content)]
+
+      # Recurse into any other map values
+      {_key, value} ->
+        [extract_text_from_docx_map(value)]
+    end)
+    |> Enum.join(" ")
   end
 
   defp extract_text_from_docx_map(list) when is_list(list) do
