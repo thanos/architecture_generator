@@ -10,6 +10,8 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.InitialStep do
      |> assign(:project, assigns.project)
      |> assign(:id, assigns.id)
      |> assign(:brd_text, assigns.project.brd_content || "")
+     |> assign(:parsing_status, nil)
+     |> assign(:parsed_content_preview, nil)
      |> allow_upload(:brd_file,
        accept: ~w(.txt .md .pdf .doc .docx),
        max_entries: 1,
@@ -40,6 +42,9 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.InitialStep do
     # Handle file upload if present - store in S3 via Uploads context
     result =
       consume_uploaded_entries(socket, :brd_file, fn %{path: path}, entry ->
+        # Set parsing status
+        send(self(), {:update_parsing_status, "Parsing #{entry.client_name}..."})
+
         # Create upload record and store file in S3
         case Uploads.create_upload(
                %{
@@ -51,12 +56,23 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.InitialStep do
                },
                path
              ) do
-          {:ok, upload} ->
-            # Read file content for BRD processing
-            {:ok, content} = File.read(path)
-            {:ok, {upload, content}}
+          {:ok, upload, parsed_content} ->
+            # Notify parsing complete
+            if parsed_content do
+              send(
+                self(),
+                {:update_parsing_status, "✅ Successfully parsed #{entry.client_name}"}
+              )
+
+              send(self(), {:show_content_preview, String.slice(parsed_content, 0..500)})
+            else
+              send(self(), {:update_parsing_status, "⚠️ Could not extract text from file"})
+            end
+
+            {:ok, {upload, parsed_content}}
 
           {:error, reason} ->
+            send(self(), {:update_parsing_status, "❌ Upload failed: #{inspect(reason)}"})
             {:postpone, reason}
         end
       end)
@@ -64,9 +80,22 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.InitialStep do
     # Determine final BRD content
     final_brd_content =
       case result do
-        [{_upload, file_content} | _] when byte_size(file_content) > 0 ->
-          # If file was uploaded successfully, use file content
-          file_content
+        [{_upload, parsed_content} | _] when is_binary(parsed_content) ->
+          # If file was uploaded and parsed successfully, use parsed content
+          parsed_content
+
+        [{_upload, nil} | _] ->
+          # File uploaded but parsing failed, try reading raw content
+          case result do
+            [{_upload, _} | _] ->
+              # Fallback to text area content if parsing failed
+              if String.length(brd_text) > 0,
+                do: brd_text,
+                else: "File uploaded but parsing failed"
+
+            _ ->
+              brd_text
+          end
 
         _ ->
           # Otherwise use text area content
@@ -88,6 +117,16 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.InitialStep do
       {:error, _changeset} ->
         {:noreply, put_flash(socket, :error, "Please provide BRD content")}
     end
+  end
+
+  @impl true
+  def handle_info({:update_parsing_status, status}, socket) do
+    {:noreply, assign(socket, :parsing_status, status)}
+  end
+
+  @impl true
+  def handle_info({:show_content_preview, preview}, socket) do
+    {:noreply, assign(socket, :parsed_content_preview, preview)}
   end
 
   @impl true
@@ -147,7 +186,12 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.InitialStep do
                   click to upload
                 </span>
               </p>
-              <p class="text-xs text-slate-500">Supports: .txt, .md, .pdf, .doc, .docx (max 10MB)</p>
+              <p class="text-xs text-slate-500">
+                Supports: .txt, .md, .pdf, .doc, .docx (max 10MB)
+              </p>
+              <p class="text-xs text-violet-600 font-semibold mt-1">
+                ✨ Automatic text extraction from PDF and Word files
+              </p>
             </label>
 
             <.live_file_input upload={@uploads.brd_file} class="hidden" />
@@ -190,6 +234,28 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.InitialStep do
                   {error_to_string(err)}
                 </p>
               <% end %>
+            </div>
+          <% end %>
+          
+    <!-- Parsing Status -->
+          <%= if @parsing_status do %>
+            <div class="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div class="flex items-center gap-2">
+                <.icon name="hero-document-magnifying-glass" class="w-5 h-5 text-blue-600" />
+                <span class="text-sm font-medium text-blue-900">{@parsing_status}</span>
+              </div>
+            </div>
+          <% end %>
+          
+    <!-- Parsed Content Preview -->
+          <%= if @parsed_content_preview do %>
+            <div class="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+              <p class="text-sm font-semibold text-green-900 mb-2">
+                📄 Content Preview (first 500 characters):
+              </p>
+              <p class="text-xs text-green-800 font-mono whitespace-pre-wrap">
+                {@parsed_content_preview}...
+              </p>
             </div>
           <% end %>
           
