@@ -11,6 +11,8 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.InitialStep do
      |> assign(:brd_text, assigns.project.brd_content || "")
      |> assign(:parsing_status, nil)
      |> assign(:parsed_content_preview, nil)
+     |> assign(:processing_mode, assigns.project.processing_mode || "parse_only")
+     |> assign(:llm_provider, assigns.project.llm_provider || "openai")
      |> allow_upload(:brd_file,
        accept: ~w(.txt .md .pdf .doc .docx),
        max_entries: 1,
@@ -23,6 +25,16 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.InitialStep do
     {:noreply, assign(socket, :brd_text, brd_text)}
   end
 
+  def handle_event("validate_processing_mode", params, socket) do
+    processing_mode = Map.get(params, "processing_mode", "parse_only")
+    llm_provider = Map.get(params, "llm_provider", "openai")
+
+    {:noreply,
+     socket
+     |> assign(:processing_mode, processing_mode)
+     |> assign(:llm_provider, llm_provider)}
+  end
+
   def handle_event("validate_upload", _params, socket) do
     {:noreply, socket}
   end
@@ -33,12 +45,14 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.InitialStep do
 
   def handle_event("submit_brd", %{"brd_text" => brd_text}, socket) do
     project = socket.assigns.project
+    processing_mode = socket.assigns.processing_mode
+    llm_provider = socket.assigns.llm_provider
 
     # Handle file upload if present - store in S3 via Uploads context
     result =
       consume_uploaded_entries(socket, :brd_file, fn %{path: path}, entry ->
         # Set parsing status
-        send(self(), {:update_parsing_status, "Parsing #{entry.client_name}..."})
+        send(self(), {:update_parsing_status, "Processing #{entry.client_name}..."})
 
         # Create upload record and store file in S3
         case Uploads.create_upload(
@@ -47,7 +61,9 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.InitialStep do
                  filename: entry.client_name,
                  content_type: entry.client_type,
                  size_bytes: entry.client_size,
-                 uploaded_by: project.user_email
+                 uploaded_by: project.user_email,
+                 processing_mode: processing_mode,
+                 llm_provider: llm_provider
                },
                path
              ) do
@@ -56,7 +72,7 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.InitialStep do
             if parsed_content do
               send(
                 self(),
-                {:update_parsing_status, "✅ Successfully parsed #{entry.client_name}"}
+                {:update_parsing_status, "✅ Successfully processed #{entry.client_name}"}
               )
 
               send(self(), {:show_content_preview, String.slice(parsed_content, 0..500)})
@@ -76,17 +92,17 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.InitialStep do
     final_brd_content =
       case result do
         [{_upload, parsed_content} | _] when is_binary(parsed_content) ->
-          # If file was uploaded and parsed successfully, use parsed content
+          # If file was uploaded and processed successfully, use parsed/LLM content
           parsed_content
 
         [{_upload, nil} | _] ->
-          # File uploaded but parsing failed, try reading raw content
+          # File uploaded but processing failed, try reading raw content
           case result do
             [{_upload, _} | _] ->
-              # Fallback to text area content if parsing failed
+              # Fallback to text area content if processing failed
               if String.length(brd_text) > 0,
                 do: brd_text,
-                else: "File uploaded but parsing failed"
+                else: "File uploaded but processing failed"
 
             _ ->
               brd_text
@@ -157,6 +173,87 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.InitialStep do
           <p class="text-sm text-slate-500 mt-2">
             Minimum 100 characters recommended for meaningful analysis
           </p>
+        </div>
+        
+    <!-- Processing Mode Selection -->
+        <div class="mb-6 bg-gradient-to-r from-violet-50 to-blue-50 rounded-lg p-6">
+          <h3 class="text-lg font-bold text-slate-900 mb-4">
+            🤖 AI Processing Options
+          </h3>
+
+          <div class="space-y-4" phx-change="validate_processing_mode" phx-target={@myself}>
+            <!-- Parse Only -->
+            <label class="flex items-start gap-3 cursor-pointer">
+              <input
+                type="radio"
+                name="processing_mode"
+                value="parse_only"
+                checked={@processing_mode == "parse_only"}
+                class="mt-1 w-4 h-4 text-violet-600 border-slate-300 focus:ring-violet-500"
+              />
+              <div>
+                <p class="font-semibold text-slate-900">Parse Document Only</p>
+                <p class="text-sm text-slate-600">
+                  Extract text from your document without AI enhancement (fastest, free)
+                </p>
+              </div>
+            </label>
+            
+    <!-- LLM Parsed -->
+            <label class="flex items-start gap-3 cursor-pointer">
+              <input
+                type="radio"
+                name="processing_mode"
+                value="llm_parsed"
+                checked={@processing_mode == "llm_parsed"}
+                class="mt-1 w-4 h-4 text-violet-600 border-slate-300 focus:ring-violet-500"
+              />
+              <div>
+                <p class="font-semibold text-slate-900">Parse + AI Enhancement</p>
+                <p class="text-sm text-slate-600">
+                  Extract text, then use AI to create a professional, standardized BRD
+                </p>
+              </div>
+            </label>
+            
+    <!-- LLM Raw -->
+            <label class="flex items-start gap-3 cursor-pointer">
+              <input
+                type="radio"
+                name="processing_mode"
+                value="llm_raw"
+                checked={@processing_mode == "llm_raw"}
+                class="mt-1 w-4 h-4 text-violet-600 border-slate-300 focus:ring-violet-500"
+              />
+              <div>
+                <p class="font-semibold text-slate-900">Direct AI Conversion</p>
+                <p class="text-sm text-slate-600">
+                  Send raw document to AI for complete BRD generation (best for rough notes)
+                </p>
+              </div>
+            </label>
+            
+    <!-- LLM Provider Selection (only show if AI mode selected) -->
+            <%= if @processing_mode in ["llm_parsed", "llm_raw"] do %>
+              <div class="mt-4 pl-7">
+                <label for="llm-provider" class="block text-sm font-medium text-slate-700 mb-2">
+                  AI Provider
+                </label>
+                <select
+                  id="llm-provider"
+                  name="llm_provider"
+                  class="w-full max-w-xs px-4 py-2 rounded-lg bg-white text-slate-900 border-2 border-slate-200 focus:border-violet-400 focus:ring focus:ring-violet-200 focus:ring-opacity-50 transition-colors"
+                >
+                  <option value="openai" selected={@llm_provider == "openai"}>
+                    OpenAI (GPT-4o-mini)
+                  </option>
+                </select>
+                <p class="text-xs text-slate-500 mt-1">
+                  Requires OPENAI_API_KEY environment variable
+                </p>
+              </div>
+            <% end %>
+          </div>
         </div>
         
     <!-- File Upload Section -->
