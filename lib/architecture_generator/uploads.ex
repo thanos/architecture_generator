@@ -189,26 +189,17 @@ defmodule ArchitectureGenerator.Uploads do
     Repo.delete(upload)
   end
 
-  @doc """
-  Creates a version for an upload.
-  """
   defp create_version(upload, attrs) do
     %UploadVersion{}
     |> UploadVersion.create_changeset(Map.put(attrs, :upload_id, upload.id))
     |> Repo.insert()
   end
 
-  @doc """
-  Uploads a file to S3.
-  """
   defp upload_to_s3(key, binary, content_type) do
     S3.put_object(@bucket, key, binary, content_type: content_type || "application/octet-stream")
     |> ExAws.request()
   end
 
-  @doc """
-  Deletes a file from S3.
-  """
   defp delete_from_s3(key) do
     S3.delete_object(@bucket, key)
     |> ExAws.request()
