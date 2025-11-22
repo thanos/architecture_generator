@@ -8,7 +8,7 @@ defmodule ArchitectureGeneratorWeb.UploadLive.Index do
     {:ok,
      socket
      |> assign(:page_title, "Upload Manager")
-     |> assign(:uploads, Uploads.list_uploads())
+     |> assign(:upload_list, Uploads.list_uploads())
      |> assign(:filter_project_id, nil)}
   end
 
@@ -30,7 +30,7 @@ defmodule ArchitectureGeneratorWeb.UploadLive.Index do
     {:noreply,
      socket
      |> put_flash(:info, "Upload deleted successfully")
-     |> assign(:uploads, Uploads.list_uploads())}
+     |> assign(:upload_list, Uploads.list_uploads())}
   end
 
   @impl true
@@ -44,7 +44,7 @@ defmodule ArchitectureGeneratorWeb.UploadLive.Index do
 
     {:noreply,
      socket
-     |> assign(:uploads, uploads)
+     |> assign(:upload_list, uploads)
      |> assign(:filter_project_id, project_id)}
   end
 
@@ -75,7 +75,7 @@ defmodule ArchitectureGeneratorWeb.UploadLive.Index do
                   class="px-4 py-2 rounded-lg bg-white text-slate-900 border-2 border-slate-200 focus:border-violet-400 focus:ring focus:ring-violet-200 focus:ring-opacity-50 transition-colors"
                 >
                   <option value="">All Projects</option>
-                  <%= for upload <- @uploads |> Enum.map(& &1.project) |> Enum.uniq_by(& &1.id) do %>
+                  <%= for upload <- @upload_list |> Enum.map(& &1.project) |> Enum.uniq_by(& &1.id) do %>
                     <option value={upload.id} selected={@filter_project_id == to_string(upload.id)}>
                       {upload.name}
                     </option>
@@ -87,7 +87,7 @@ defmodule ArchitectureGeneratorWeb.UploadLive.Index do
           
     <!-- Upload Cards -->
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <%= for upload <- @uploads do %>
+            <%= for upload <- @upload_list do %>
               <div class="bg-white/80 backdrop-blur-sm rounded-xl border border-violet-200 shadow-lg hover:shadow-xl transition-shadow">
                 <div class="p-6">
                   <!-- File Icon & Name -->
@@ -146,7 +146,7 @@ defmodule ArchitectureGeneratorWeb.UploadLive.Index do
             <% end %>
           </div>
 
-          <%= if @uploads == [] do %>
+          <%= if @upload_list == [] do %>
             <div class="text-center py-12">
               <.icon name="hero-folder-open" class="w-16 h-16 text-slate-400 mx-auto mb-4" />
               <p class="text-lg text-slate-600">No uploads found</p>
