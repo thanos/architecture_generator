@@ -20,6 +20,8 @@ defmodule ArchitectureGeneratorWeb.Router do
     live "/", ProjectLive.New
     live "/projects/new", ProjectLive.New
     live "/projects/:id", ProjectLive.Show
+    live "/uploads", UploadLive.Index, :index
+    live "/uploads/:id", UploadLive.Show, :show
   end
 
   # Other scopes may use custom stacks.
