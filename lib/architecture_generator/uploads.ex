@@ -6,7 +6,7 @@ defmodule ArchitectureGenerator.Uploads do
   import Ecto.Query, warn: false
   alias ArchitectureGenerator.Repo
   alias ArchitectureGenerator.Uploads.{Upload, UploadVersion}
-  alias ArchitectureGenerator.DocumentParser
+  alias ArchitectureGenerator.{DocumentParser, LLMService}
   alias ExAws.S3
 
   @bucket Application.compile_env(:architecture_generator, :uploads_bucket)
@@ -97,11 +97,48 @@ defmodule ArchitectureGenerator.Uploads do
            ),
          {:ok, _} <-
            upload_to_storage(s3_key, file_binary, attrs[:content_type] || attrs["content_type"]) do
-      # Try to parse the document and extract text
-      parsed_content =
-        case DocumentParser.parse_file(file_path) do
-          {:ok, content} -> content
-          {:error, _reason} -> nil
+      # Get processing mode from attrs
+      processing_mode = attrs[:processing_mode] || attrs["processing_mode"] || "parse_only"
+      llm_provider = attrs[:llm_provider] || attrs["llm_provider"] || "openai"
+
+      # Process the file based on mode
+      processed_content =
+        case processing_mode do
+          "parse_only" ->
+            # Just parse the document
+            case DocumentParser.parse_file(file_path) do
+              {:ok, content} -> content
+              {:error, _reason} -> nil
+            end
+
+          "llm_parsed" ->
+            # Parse first, then enhance with LLM
+            case DocumentParser.parse_file(file_path) do
+              {:ok, parsed_text} ->
+                case LLMService.enhance_parsed_text(parsed_text, provider: llm_provider) do
+                  {:ok, enhanced_content} -> enhanced_content
+                  {:error, _reason} -> parsed_text
+                end
+
+              {:error, _reason} ->
+                nil
+            end
+
+          "llm_raw" ->
+            # Send raw file to LLM
+            filename = attrs[:filename] || attrs["filename"]
+
+            case LLMService.convert_document_to_brd(file_binary, filename, provider: llm_provider) do
+              {:ok, brd_content} -> brd_content
+              {:error, _reason} -> nil
+            end
+
+          _ ->
+            # Default to parse_only
+            case DocumentParser.parse_file(file_path) do
+              {:ok, content} -> content
+              {:error, _reason} -> nil
+            end
         end
 
       # Create the upload record
@@ -127,7 +164,7 @@ defmodule ArchitectureGenerator.Uploads do
             uploaded_by: attrs[:uploaded_by] || attrs["uploaded_by"]
           })
 
-          {:ok, Repo.preload(upload, :versions), parsed_content}
+          {:ok, Repo.preload(upload, :versions), processed_content}
 
         {:error, changeset} ->
           # Cleanup storage if DB insert fails
