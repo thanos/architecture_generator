@@ -92,50 +92,29 @@ defmodule ArchitectureGenerator.DocumentParser do
   end
 
   defp parse_docx_xml(xml_content) do
-    # Parse XML and extract text from <w:t> elements
-    case XmlToMap.naive_map(xml_content) do
-      {:ok, parsed} ->
-        text = extract_text_from_docx_map(parsed)
-        cleaned_text = clean_text(text)
-        {:ok, cleaned_text}
+    # Simple approach: extract all text between <w:t> and </w:t> tags
+    # This regex finds all content within w:t tags
+    text =
+      xml_content
+      |> to_string()
+      |> then(fn content ->
+        # Match all <w:t>content</w:t> or <w:t xml:space="preserve">content</w:t>
+        Regex.scan(~r/<w:t[^>]*>([^<]*)<\/w:t>/, content)
+        |> Enum.map(fn [_, text] -> text end)
+        |> Enum.join(" ")
+      end)
+      |> clean_text()
 
-      {:error, reason} ->
-        Logger.error("Failed to parse DOCX XML: #{inspect(reason)}")
-        {:error, {:docx_xml_parse_error, reason}}
+    if String.length(text) > 0 do
+      {:ok, text}
+    else
+      {:error, :docx_no_text_extracted}
     end
+  rescue
+    error ->
+      Logger.error("Exception parsing DOCX XML: #{inspect(error)}")
+      {:error, {:docx_xml_exception, error}}
   end
-
-  defp extract_text_from_docx_map(map) when is_map(map) do
-    # Recursively extract all text from the map structure
-    map
-    |> Enum.flat_map(fn
-      # Handle "w:t" text nodes - these contain the actual text
-      {"w:t", text} when is_binary(text) ->
-        [text]
-
-      # Handle "w:t" with nested #content structure
-      {"w:t", %{"#content" => content}} when is_binary(content) ->
-        [content]
-
-      # Handle "#content" keys that point to nested structures
-      {"#content", content} ->
-        [extract_text_from_docx_map(content)]
-
-      # Recurse into any other map values
-      {_key, value} ->
-        [extract_text_from_docx_map(value)]
-    end)
-    |> Enum.join(" ")
-  end
-
-  defp extract_text_from_docx_map(list) when is_list(list) do
-    list
-    |> Enum.map(&extract_text_from_docx_map/1)
-    |> Enum.join(" ")
-  end
-
-  defp extract_text_from_docx_map(text) when is_binary(text), do: text
-  defp extract_text_from_docx_map(_), do: ""
 
   @doc """
   Parses a .doc file (legacy Word format).
