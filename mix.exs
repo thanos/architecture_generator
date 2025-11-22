@@ -66,11 +66,11 @@ defmodule ArchitectureGenerator.MixProject do
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.2.0"},
       {:bandit, "~> 1.5"},
-      {:oban, "~> 2.20"}, # Added comma here
+      {:oban, "~> 2.20"},
       {:ex_aws, "~> 2.5"},
       {:ex_aws_s3, "~> 2.5"},
       {:sweet_xml, "~> 0.7"},
-      {:hackney, "~> 1.20"}
+      {:hackney, "~> 1.20"}, # Added missing comma here
       {:pdf_text, "~> 0.3"},
       {:elixir_xml_to_map, "~> 3.0"}
     ]
