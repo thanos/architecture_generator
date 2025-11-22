@@ -73,7 +73,7 @@ defmodule ArchitectureGeneratorWeb.UploadLive.Show do
   end
 
   @impl true
-  def handle_event("delete_version", %{"version_id" => version_id}, socket) do
+  def handle_event("delete_version", %{"version_id" => _version_id}, socket) do
     # For now, we'll just show a message - actual implementation would need restore logic
     {:noreply,
      put_flash(
