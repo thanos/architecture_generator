@@ -1,6 +1,6 @@
 defmodule ArchitectureGenerator.LLMService do
   @moduledoc """
-  Service for interacting with LLM providers (OpenAI) to generate and enhance BRDs.
+  Service for interacting with LLM providers using ReqLLM to generate and enhance BRDs.
   """
 
   require Logger
@@ -15,11 +15,19 @@ defmodule ArchitectureGenerator.LLMService do
   """
   def convert_document_to_brd(file_content, filename, opts \\ []) do
     provider = Keyword.get(opts, :provider, "openai")
+    model_spec = build_model_spec(provider)
 
-    case provider do
-      "openai" -> convert_with_openai(file_content, filename)
-      _ -> {:error, :unsupported_provider}
-    end
+    prompt = build_conversion_prompt(filename)
+
+    user_content =
+      if is_binary(file_content), do: inspect(file_content, limit: 5000), else: file_content
+
+    messages = [
+      %{role: "system", content: prompt},
+      %{role: "user", content: user_content}
+    ]
+
+    call_llm(model_spec, messages)
   end
 
   @doc """
@@ -32,80 +40,40 @@ defmodule ArchitectureGenerator.LLMService do
   """
   def enhance_parsed_text(parsed_text, opts \\ []) do
     provider = Keyword.get(opts, :provider, "openai")
+    model_spec = build_model_spec(provider)
 
-    case provider do
-      "openai" -> enhance_with_openai(parsed_text)
-      _ -> {:error, :unsupported_provider}
-    end
+    prompt = build_enhancement_prompt()
+
+    messages = [
+      %{role: "system", content: prompt},
+      %{role: "user", content: parsed_text}
+    ]
+
+    call_llm(model_spec, messages)
   end
 
-  # Private OpenAI integration functions
+  defp build_model_spec("openai"), do: "openai:gpt-4o-mini"
+  defp build_model_spec(provider), do: "#{provider}:default"
 
-  defp convert_with_openai(file_content, filename) do
-    api_key = get_openai_api_key()
+  defp call_llm(model_spec, messages) do
+    Logger.info("Calling LLM with model: #{inspect(model_spec)}")
 
-    if is_nil(api_key) do
-      Logger.error("OpenAI API key not configured")
-      {:error, :missing_api_key}
-    else
-      prompt = build_conversion_prompt(filename)
-
-      # For binary content, we'll convert to text representation
-      # In a real implementation, you might want to use GPT-4 Vision for images/PDFs
-      text_content =
-        if is_binary(file_content), do: inspect(file_content, limit: 5000), else: file_content
-
-      call_openai(api_key, prompt, text_content)
-    end
-  end
-
-  defp enhance_with_openai(parsed_text) do
-    api_key = get_openai_api_key()
-
-    if is_nil(api_key) do
-      Logger.error("OpenAI API key not configured")
-      {:error, :missing_api_key}
-    else
-      prompt = build_enhancement_prompt()
-      call_openai(api_key, prompt, parsed_text)
-    end
-  end
-
-  defp call_openai(api_key, system_prompt, user_content) do
-    Logger.info("Calling OpenAI API to generate BRD")
-
-    request_body = %{
-      model: "gpt-4o-mini",
-      messages: [
-        %{role: "system", content: system_prompt},
-        %{role: "user", content: user_content}
-      ],
-      temperature: 0.7,
-      max_tokens: 4000
-    }
-
-    case OpenAI.chat_completion(
-           model: request_body.model,
-           messages: request_body.messages,
-           temperature: request_body.temperature,
-           max_tokens: request_body.max_tokens,
-           api_key: api_key
-         ) do
-      {:ok, %{choices: [%{"message" => %{"content" => content}} | _]}} ->
-        Logger.info("Successfully generated BRD from OpenAI")
+    case ReqLLM.generate_text(model_spec, messages, temperature: 0.7, max_tokens: 4000) do
+      {:ok, content} when is_binary(content) ->
+        Logger.info("Successfully generated BRD from LLM")
         {:ok, content}
 
-      {:ok, response} ->
-        Logger.error("Unexpected OpenAI response format: #{inspect(response)}")
-        {:error, :unexpected_response}
-
       {:error, reason} ->
-        Logger.error("OpenAI API error: #{inspect(reason)}")
+        Logger.error("LLM API error: #{inspect(reason)}")
         {:error, reason}
+
+      unexpected ->
+        Logger.error("Unexpected LLM response format: #{inspect(unexpected)}")
+        {:error, :unexpected_response}
     end
   rescue
     error ->
-      Logger.error("Exception calling OpenAI: #{inspect(error)}")
+      Logger.error("Exception calling LLM: #{inspect(error)}")
       {:error, {:exception, error}}
   end
 
@@ -167,10 +135,5 @@ defmodule ArchitectureGenerator.LLMService do
 
     Produce a thorough, professional BRD ready for stakeholder review.
     """
-  end
-
-  defp get_openai_api_key do
-    System.get_env("OPENAI_API_KEY") ||
-      Application.get_env(:architecture_generator, :openai_api_key)
   end
 end
