@@ -53,8 +53,17 @@ defmodule ArchitectureGenerator.Uploads do
   """
   def get_upload!(id) do
     Upload
-    |> preload([:project, versions: from(v in UploadVersion, order_by: [desc: v.version_number])])
+    |> preload([:project, :versions])
     |> Repo.get!(id)
+    |> case do
+      nil ->
+        raise Ecto.NoResultsError
+
+      upload ->
+        Repo.preload(upload,
+          versions: from(v in UploadVersion, order_by: [desc: v.version_number])
+        )
+    end
   end
 
   @doc """
