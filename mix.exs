@@ -71,6 +71,8 @@ defmodule ArchitectureGenerator.MixProject do
       {:ex_aws_s3, "~> 2.5"},
       {:sweet_xml, "~> 0.7"},
       {:hackney, "~> 1.20"}
+      {:pdf_text, "~> 0.3"},
+      {:elixir_xml_to_map, "~> 3.0"}
     ]
   end
 
