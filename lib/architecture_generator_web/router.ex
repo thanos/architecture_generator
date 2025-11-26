@@ -17,7 +17,7 @@ defmodule ArchitectureGeneratorWeb.Router do
   scope "/", ArchitectureGeneratorWeb do
     pipe_through :browser
 
-    live "/", ProjectLive.New
+    get "/", PageController, :home
     live "/projects/new", ProjectLive.New
     live "/projects/:id", ProjectLive.Show
   end
