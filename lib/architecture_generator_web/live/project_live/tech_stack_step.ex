@@ -2,6 +2,8 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.TechStackStep do
   use ArchitectureGeneratorWeb, :live_component
 
   alias ArchitectureGenerator.Projects
+  alias ArchitectureGenerator.Workers.PlanGenerationWorker
+  alias Oban
 
   @impl true
   def update(assigns, socket) do
@@ -24,13 +26,35 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.TechStackStep do
     project = socket.assigns.project
     tech_stack = socket.assigns.tech_stack
 
-    case Projects.save_tech_stack_config(project, tech_stack) do
-      {:ok, _updated_project} ->
-        send(self(), {:refresh_project, project.id})
-        {:noreply, socket}
+    # Check if deployment_env is "Fly.io"
+    if Map.get(tech_stack, "deployment_env") != "Fly.io" do
+      {:noreply, put_flash(socket, :error, "Only Fly.io deployment is currently supported.")}
+    else
+      case Projects.save_tech_stack_config(project, tech_stack) do
+        {:ok, updated_project} ->
+          # Enqueue the Oban job to generate the architectural plan
+          case %{project_id: updated_project.id}
+               |> PlanGenerationWorker.new()
+               |> Oban.insert() do
+            {:ok, _job} ->
+              send(self(), {:refresh_project, updated_project.id})
+              {:noreply, socket}
 
-      {:error, _changeset} ->
-        {:noreply, put_flash(socket, :error, "Failed to save tech stack configuration")}
+            {:error, changeset} ->
+              {:noreply,
+               socket
+               |> put_flash(
+                 :error,
+                 "Failed to enqueue plan generation: #{inspect(changeset.errors)}"
+               )}
+          end
+          |> Oban.insert()
+
+          send(self(), {:refresh_project, updated_project.id})
+
+        {:error, _changeset} ->
+          {:noreply, put_flash(socket, :error, "Failed to save tech stack configuration")}
+      end
     end
   end
 
