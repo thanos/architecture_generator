@@ -19,21 +19,38 @@ defmodule ArchitectureGenerator.Workers.PlanGenerationWorker do
     try do
       plan_content = generate_plan_with_llm(project)
 
-      {:ok, architectural_plan} =
-        Plans.create_architectural_plan(%{
-          content: plan_content,
-          project_id: project.id
-        })
+      case Plans.create_architectural_plan(%{
+             content: plan_content,
+             project_id: project.id
+           }) do
+        {:ok, architectural_plan} ->
+          case Projects.complete_project(project, architectural_plan.id) do
+            {:ok, _project} ->
+              Logger.info("Successfully generated plan for project #{project_id}")
+              {:ok, %{architectural_plan_id: architectural_plan.id}}
 
-      case Projects.complete_project(project, architectural_plan.id) do
-        {:ok, _project} ->
-          Logger.info("Successfully generated plan for project #{project_id}")
-          {:ok, %{architectural_plan_id: architectural_plan.id}}
+            {:error, changeset} ->
+              Logger.error(
+                "Failed to mark project #{project.id} as complete: #{inspect(changeset.errors)}"
+              )
+
+              {:error, changeset}
+          end
 
         {:error, changeset} ->
           Logger.error(
-            "Failed to mark project #{project.id} as complete: #{inspect(changeset.errors)}"
+            "Failed to create architectural plan for project #{project.id}: #{inspect(changeset.errors)}"
           )
+
+          case Projects.mark_project_error(project) do
+            {:ok, _project} ->
+              :ok
+
+            {:error, error_changeset} ->
+              Logger.error(
+                "Failed to mark project #{project.id} as error: #{inspect(error_changeset.errors)}"
+              )
+          end
 
           {:error, changeset}
       end
