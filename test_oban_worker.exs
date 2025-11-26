@@ -2,5 +2,4 @@ alias ArchitectureGenerator.{Repo, Projects.Project, Workers.PlanGenerationWorke
 
 # Update project to Queued status with test data
 project =
-  Repo.get!(Project, 2)
-  |> Ecto.Changes
+  project = Repo.get!(Project, 2)
