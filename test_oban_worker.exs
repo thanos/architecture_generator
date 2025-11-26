@@ -1,48 +1,27 @@
 alias ArchitectureGenerator.{Repo, Projects.Project, Workers.PlanGenerationWorker}
 
-# Update project to Queued status with test data
-project =
-  Repo.get!(Project, 2)
-  |> Ecto.Changeset.change(%{
-    status: "Queued",
-    elicitation_data: %{
-      "expected_users" => "100,000 concurrent users, 1M daily active users",
-      "performance_requirements" => "Page load under 2 seconds, Search results under 500ms",
-      "security_compliance" => "PCI-DSS",
-      "integration_requirements" => "Stripe, PayPal, FedEx, Analytics",
-      "data_volume" => "10M+ products, 500K daily transactions",
-      "availability_requirements" => "99.9%"
-    },
-    tech_stack_config: %{
-      "primary_language" => "Elixir",
-      "web_framework" => "Phoenix LiveView",
-      "database_system" => "PostgreSQL",
-      "deployment_env" => "Fly.io"
-    }
-  })
-  |> Repo.update!()
+project = Repo.get!(Project, 2)
 
-IO.puts("✅ Project updated to Queued status")
+IO.puts("Enqueueing plan generation for project #{project.id}...")
 
-# Manually enqueue the Oban job
-job =
-  %{project_id: project.id}
-  |> PlanGenerationWorker.new()
-  |> Oban.insert!()
+case %{project_id: project.id}
+     |> PlanGenerationWorker.new()
+     |> Oban.insert() do
+  {:ok, job} ->
+    IO.puts("Job enqueued successfully: #{inspect(job.id)}")
+    IO.puts("Waiting for job to complete...")
+    Process.sleep(5000)
 
-IO.puts("✅ Oban job inserted with ID: #{job.id}")
-IO.puts("Waiting 3 seconds for job to process...")
-:timer.sleep(3000)
+    updated_project = Repo.get!(Project, project.id)
+    IO.puts("Project status: #{updated_project.status}")
 
-# Check if job was processed
-updated_project = Repo.get!(Project, 2) |> Repo.preload(:architectural_plan)
-IO.puts("\nProject status: #{updated_project.status}")
+    if updated_project.architectural_plan_id do
+      IO.puts("Architectural plan created with ID: #{updated_project.architectural_plan_id}")
+    else
+      IO.puts("No architectural plan created yet")
+    end
 
-if updated_project.architectural_plan do
-  IO.puts("✅ Architectural plan created!")
-  IO.puts("\nPlan preview:")
-  IO.puts(String.slice(updated_project.architectural_plan.content, 0..300))
-  IO.puts("...")
-else
-  IO.puts("❌ No architectural plan yet - job may still be processing")
+  {:error, changeset} ->
+    IO.puts("Failed to enqueue job:")
+    IO.inspect(changeset.errors, label: "Changeset errors")
 end
