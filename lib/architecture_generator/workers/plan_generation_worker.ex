@@ -50,7 +50,15 @@ defmodule ArchitectureGenerator.Workers.PlanGenerationWorker do
         Logger.error("Failed to generate plan for project #{project_id}: #{inspect(error)}")
 
         # Mark project as error
-        Projects.mark_project_error(project)
+        case Projects.mark_project_error(project) do
+          {:ok, _project} ->
+            :ok
+
+          {:error, changeset} ->
+            Logger.error(
+              "Failed to mark project #{project.id} as error: #{inspect(changeset.errors)}"
+            )
+        end
 
         {:error, error}
     end
