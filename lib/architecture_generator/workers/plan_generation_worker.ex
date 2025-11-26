@@ -1,15 +1,4 @@
 defmodule ArchitectureGenerator.Workers.PlanGenerationWorker do
-  @moduledoc """
-  Oban worker that processes queued projects and generates architectural plans.
-
-  This worker:
-  1. Receives a project_id from the queue
-  2. Fetches the project with BRD content, elicitation data, and tech stack config
-  3. Calls an LLM service to generate the architectural plan
-  4. Creates an ArchitecturalPlan record
-  5. Updates the project status to "Complete"
-  6. Sends notification email (future enhancement)
-  """
   use Oban.Worker, queue: :default, max_attempts: 3
 
   alias ArchitectureGenerator.{Projects, Plans}
@@ -22,34 +11,53 @@ defmodule ArchitectureGenerator.Workers.PlanGenerationWorker do
 
     project = Projects.get_project!(project_id)
 
-    # Validate project is in Queued status
     if project.status != "Queued" do
       Logger.warning("Project #{project_id} is not in Queued status, skipping")
       {:cancel, "Project not in Queued status"}
     end
 
     try do
-      # Generate the architectural plan
-      plan_content = generate_plan(project)
+      plan_content = generate_plan_with_llm(project)
 
-      # Create the architectural plan record
-      {:ok, architectural_plan} =
-        Plans.create_architectural_plan(%{
-          content: plan_content,
-          project_id: project.id
-        })
+      case Plans.create_architectural_plan(%{
+             content: plan_content,
+             project_id: project.id
+           }) do
+        {:ok, architectural_plan} ->
+          case Projects.complete_project(project, architectural_plan.id) do
+            {:ok, _project} ->
+              Logger.info("Successfully generated plan for project #{project_id}")
+              {:ok, %{architectural_plan_id: architectural_plan.id}}
 
-      # Update project to Complete status
-      {:ok, _project} = Projects.complete_project(project, architectural_plan.id)
+            {:error, changeset} ->
+              Logger.error(
+                "Failed to mark project #{project.id} as complete: #{inspect(changeset.errors)}"
+              )
 
-      Logger.info("Successfully generated plan for project #{project_id}")
+              {:error, changeset}
+          end
 
-      {:ok, %{architectural_plan_id: architectural_plan.id}}
+        {:error, changeset} ->
+          Logger.error(
+            "Failed to create architectural plan for project #{project.id}: #{inspect(changeset.errors)}"
+          )
+
+          case Projects.mark_project_error(project) do
+            {:ok, _project} ->
+              :ok
+
+            {:error, error_changeset} ->
+              Logger.error(
+                "Failed to mark project #{project.id} as error: #{inspect(error_changeset.errors)}"
+              )
+          end
+
+          {:error, changeset}
+      end
     rescue
       error ->
         Logger.error("Failed to generate plan for project #{project_id}: #{inspect(error)}")
 
-        # Mark project as error
         case Projects.mark_project_error(project) do
           {:ok, _project} ->
             :ok
@@ -64,7 +72,76 @@ defmodule ArchitectureGenerator.Workers.PlanGenerationWorker do
     end
   end
 
-  defp generate_plan(project) do
+  defp generate_plan_with_llm(project) do
+    prompt = build_architectural_prompt(project)
+
+    case ReqLLM.generate_text("openai:gpt-4o-mini", prompt) do
+      {:ok, plan_content} ->
+        plan_content
+
+      {:error, reason} ->
+        Logger.warning(
+          "LLM generation failed for project #{project.id}: #{inspect(reason)}. Falling back to template."
+        )
+
+        generate_fallback_plan(project)
+    end
+  end
+
+  defp build_architectural_prompt(project) do
+    """
+    You are an expert software architect. Generate a comprehensive architectural plan based on the following information:
+
+    ## Business Requirements Document
+    #{project.brd_content || "No BRD provided"}
+
+    ## Elicitation Data
+    #{format_elicitation_for_prompt(project.elicitation_data)}
+
+    ## Technology Stack
+    #{format_tech_stack_for_prompt(project.tech_stack_config)}
+
+    Please provide a detailed architectural plan with the following sections:
+
+    1. **Executive Summary** - High-level overview of the architecture
+    2. **Business Context** - Understanding of business requirements and goals
+    3. **Functional Requirements** - Key features and capabilities
+    4. **Non-Functional Requirements** - Performance, scalability, security considerations
+    5. **Architecture Overview** - High-level system design and component interaction
+    6. **Component Design** - Detailed breakdown of major system components
+    7. **Data Model** - Database schema and data flow
+    8. **API Design** - Key endpoints and integration points
+    9. **Security Architecture** - Authentication, authorization, and data protection
+    10. **Scalability Strategy** - How the system will handle growth
+    11. **Integration Requirements** - Third-party services and external systems
+    12. **Success Metrics** - How to measure architectural effectiveness
+
+    Format the response in clear Markdown with proper headings and sections.
+    """
+  end
+
+  defp format_elicitation_for_prompt(data) when is_map(data) and map_size(data) > 0 do
+    data
+    |> Enum.map(fn {question, answer} ->
+      "- **#{question}**: #{answer}"
+    end)
+    |> Enum.join("\n")
+  end
+
+  defp format_elicitation_for_prompt(_), do: "*No elicitation data provided*"
+
+  defp format_tech_stack_for_prompt(config) when is_map(config) and map_size(config) > 0 do
+    """
+    - **Primary Language**: #{Map.get(config, "primary_language", "Not specified")}
+    - **Framework**: #{Map.get(config, "web_framework", "Not specified")}
+    - **Database**: #{Map.get(config, "database_system", "Not specified")}
+    - **Deployment**: #{Map.get(config, "deployment_env", "Not specified")}
+    """
+  end
+
+  defp format_tech_stack_for_prompt(_), do: "*No tech stack configuration provided*"
+
+  defp generate_fallback_plan(project) do
     """
     # Architectural Plan for #{project.name}
 
@@ -87,27 +164,27 @@ defmodule ArchitectureGenerator.Workers.PlanGenerationWorker do
     Based on the requirements and technology choices, we recommend a microservices architecture with the following components:
 
     1. **Frontend Layer**
-       - Technology: #{Map.get(project.tech_stack_config, "framework", "React/Vue.js")}
+       - Technology: #{Map.get(project.tech_stack_config, "web_framework", "React/Vue.js")}
        - Deployment: CDN with edge caching
        - State Management: Redux/Vuex
 
     2. **API Gateway**
-       - Technology: #{Map.get(project.tech_stack_config, "language", "Node.js")} with Express/Fastify
+       - Technology: #{Map.get(project.tech_stack_config, "primary_language", "Node.js")} with Express/Fastify
        - Authentication: JWT-based auth
        - Rate Limiting: Redis-based
 
     3. **Application Services**
-       - Primary Language: #{Map.get(project.tech_stack_config, "language", "Python")}
-       - Framework: #{Map.get(project.tech_stack_config, "framework", "FastAPI/Django")}
+       - Primary Language: #{Map.get(project.tech_stack_config, "primary_language", "Python")}
+       - Framework: #{Map.get(project.tech_stack_config, "web_framework", "FastAPI/Django")}
        - Communication: REST APIs + Message Queue
 
     4. **Data Layer**
-       - Primary Database: #{Map.get(project.tech_stack_config, "database", "PostgreSQL")}
+       - Primary Database: #{Map.get(project.tech_stack_config, "database_system", "PostgreSQL")}
        - Caching: Redis
        - Search: Elasticsearch (if needed)
 
     5. **Infrastructure**
-       - Platform: #{Map.get(project.tech_stack_config, "deployment", "AWS/GCP")}
+       - Platform: #{Map.get(project.tech_stack_config, "deployment_env", "AWS/GCP")}
        - Container Orchestration: Kubernetes
        - CI/CD: GitHub Actions + ArgoCD
 
@@ -158,21 +235,33 @@ defmodule ArchitectureGenerator.Workers.PlanGenerationWorker do
 
   defp format_tech_stack(config) when is_map(config) and map_size(config) > 0 do
     """
-    - **Primary Language**: #{Map.get(config, "language", "Not specified")}
-    - **Framework**: #{Map.get(config, "framework", "Not specified")}
-    - **Database**: #{Map.get(config, "database", "Not specified")}
-    - **Deployment**: #{Map.get(config, "deployment", "Not specified")}
+    - **Primary Language**: #{Map.get(config, "primary_language", "Not specified")}
+    - **Framework**: #{Map.get(config, "web_framework", "Not specified")}
+    - **Database**: #{Map.get(config, "database_system", "Not specified")}
+    - **Deployment**: #{Map.get(config, "deployment_env", "Not specified")}
     """
   end
 
   defp format_tech_stack(_), do: "*No tech stack configuration provided*"
 
   defp format_scalability_recommendations(elicitation_data) do
-    concurrent_users = Map.get(elicitation_data, "Expected number of concurrent users", "unknown")
-    data_volume = Map.get(elicitation_data, "Expected data volume", "unknown")
+    concurrent_users =
+      extract_elicitation_value(elicitation_data, [
+        "Expected number of concurrent users",
+        "expected_users",
+        "concurrent_users",
+        "Expected concurrent users"
+      ])
+
+    data_volume =
+      extract_elicitation_value(elicitation_data, [
+        "Expected data volume",
+        "data_volume",
+        "Expected data size"
+      ])
 
     """
-    - **Expected Load**: #{concurrent_users} concurrent users
+    - **Expected Load**: #{concurrent_users}
     - **Data Volume**: #{data_volume}
     - **Scaling Strategy**: Horizontal scaling with auto-scaling groups
     - **Load Balancing**: Application Load Balancer with health checks
@@ -181,7 +270,13 @@ defmodule ArchitectureGenerator.Workers.PlanGenerationWorker do
   end
 
   defp format_security_recommendations(elicitation_data) do
-    security_reqs = Map.get(elicitation_data, "Security and compliance requirements", "standard")
+    security_reqs =
+      extract_elicitation_value(elicitation_data, [
+        "Security and compliance requirements",
+        "security_compliance",
+        "security_requirements",
+        "Security requirements"
+      ])
 
     """
     - **Security Requirements**: #{security_reqs}
@@ -193,7 +288,13 @@ defmodule ArchitectureGenerator.Workers.PlanGenerationWorker do
   end
 
   defp format_integration_recommendations(elicitation_data) do
-    integrations = Map.get(elicitation_data, "Third-party integrations needed", "none")
+    integrations =
+      extract_elicitation_value(elicitation_data, [
+        "Third-party integrations needed",
+        "integration_requirements",
+        "integrations",
+        "Required integrations"
+      ])
 
     """
     - **Required Integrations**: #{integrations}
@@ -202,4 +303,12 @@ defmodule ArchitectureGenerator.Workers.PlanGenerationWorker do
     - **Monitoring**: Centralized logging and distributed tracing
     """
   end
+
+  defp extract_elicitation_value(data, key_variants) when is_map(data) do
+    Enum.find_value(key_variants, "not specified", fn key ->
+      Map.get(data, key)
+    end)
+  end
+
+  defp extract_elicitation_value(_, _), do: "not specified"
 end
