@@ -1,23 +1,12 @@
-<div class="min-h-screen bg-gradient-to-br from-[#003168] via-[#004080] to-[#002850]">
-  <!-- Hero Section -->
-  <div class="relative overflow-hidden">
-    <!-- Animated Background Elements -->
-    <div class="absolute inset-0 overflow-hidden">
-      <div class="absolute -top-40 -right-40 w-80 h-80 bg-[#FFD500] rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse">
-      </div>
-      <div class="absolute top-40 -left-40 w-80 h-80 bg-cyan-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse delay-1000">
-      </div>
-      <div class="absolute -bottom-40 left-1/2 w-80 h-80 bg-[#FFD500] rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse delay-2000">
-      </div>
-    </div>
-    
-<!-- Navigation -->
-    <nav class="relative z-10 container mx-auto px-6 py-6">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-3">
-          <div class="w-12 h-12 bg-gradient-to-br from-[#FFD500] to-amber-400 rounded-xl flex items-center justify-center shadow-lg shadow-[#FFD500]/30">
+<div class="min-h-screen bg-white">
+  <!-- Navigation -->
+  <nav class="border-b border-gray-200 bg-white">
+    <div class="container mx-auto px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 bg-[#003168] rounded flex items-center justify-center">
             <svg
-              class="w-7 h-7 text-[#003168]"
+              class="w-5 h-5 text-[#FFD500]"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -31,47 +20,47 @@
               </path>
             </svg>
           </div>
-          <span class="text-2xl font-bold text-white">
-            ArchitectureGen<span class="text-[#FFD500]">AI</span>
-          </span>
+          <span class="text-lg font-semibold text-gray-900">ArchitectureGen</span>
         </div>
         <.link
           navigate={~p"/projects/new"}
-          class="px-6 py-3 bg-[#FFD500] hover:bg-amber-400 text-[#003168] rounded-xl font-bold shadow-lg shadow-[#FFD500]/30 hover:shadow-xl hover:shadow-[#FFD500]/40 transition-all duration-300 hover:scale-105"
+          class="px-5 py-2 bg-[#003168] hover:bg-[#004080] text-white text-sm font-medium rounded transition-colors duration-200"
         >
-          Get Started Free →
+          Get Started
         </.link>
       </div>
-    </nav>
-    
-<!-- Hero Content -->
-    <div class="relative z-10 container mx-auto px-6 pt-20 pb-32">
-      <div class="max-w-4xl mx-auto text-center">
-        <div class="inline-block mb-6 px-4 py-2 bg-white/10 backdrop-blur-sm border border-[#FFD500]/30 rounded-full">
-          <span class="text-[#FFD500] font-semibold text-sm">
-            ✨ AI-Powered Architecture Generation
+    </div>
+  </nav>
+  
+<!-- Hero Section -->
+  <div class="border-b border-gray-100">
+    <div class="container mx-auto px-6 lg:px-8 py-20 lg:py-28">
+      <div class="max-w-4xl">
+        <div class="inline-block mb-6 px-3 py-1 bg-gray-100 rounded-full">
+          <span class="text-[#003168] font-medium text-xs tracking-wide uppercase">
+            AI-Powered Architecture
           </span>
         </div>
 
-        <h1 class="text-6xl md:text-7xl font-black text-white mb-6 leading-tight">
+        <h1 class="text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight tracking-tight">
           Transform Your BRD Into
-          <span class="block text-transparent bg-clip-text bg-gradient-to-r from-[#FFD500] via-amber-300 to-[#FFD500] animate-gradient">
+          <span class="block text-[#003168] mt-2">
             Production-Ready Architecture
           </span>
         </h1>
 
-        <p class="text-xl md:text-2xl text-blue-100 mb-10 leading-relaxed max-w-3xl mx-auto">
-          Upload your Business Requirements Document and watch our AI generate comprehensive architectural plans in minutes, not weeks. Save time, reduce costs, and accelerate your development lifecycle.
+        <p class="text-xl text-gray-600 mb-10 leading-relaxed max-w-3xl">
+          Upload your Business Requirements Document and receive comprehensive architectural plans in minutes. Powered by GPT-4o-mini for enterprise-grade analysis.
         </p>
 
-        <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
+        <div class="flex flex-col sm:flex-row gap-4 items-start">
           <.link
             navigate={~p"/projects/new"}
-            class="px-10 py-5 bg-[#FFD500] hover:bg-amber-400 text-[#003168] rounded-2xl font-bold text-lg shadow-2xl shadow-[#FFD500]/40 hover:shadow-3xl hover:shadow-[#FFD500]/60 transition-all duration-300 hover:scale-110 hover:-translate-y-1"
+            class="inline-flex items-center px-8 py-4 bg-[#003168] hover:bg-[#004080] text-white font-semibold rounded transition-all duration-200"
           >
-            Start Building Now
+            Start Building
             <svg
-              class="inline-block w-6 h-6 ml-2"
+              class="w-5 h-5 ml-2"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -86,10 +75,10 @@
             </svg>
           </.link>
 
-          <button class="px-10 py-5 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white border-2 border-white/30 rounded-2xl font-bold text-lg transition-all duration-300 hover:scale-105">
-            Watch Demo
+          <button class="inline-flex items-center px-8 py-4 bg-white hover:bg-gray-50 text-gray-900 font-semibold border-2 border-gray-200 rounded transition-all duration-200">
+            View Demo
             <svg
-              class="inline-block w-6 h-6 ml-2"
+              class="w-5 h-5 ml-2"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -112,19 +101,21 @@
           </button>
         </div>
         
-<!-- Stats -->
-        <div class="mt-16 grid grid-cols-3 gap-8 max-w-2xl mx-auto">
-          <div class="text-center">
-            <div class="text-4xl font-black text-[#FFD500] mb-2">95%</div>
-            <div class="text-sm text-blue-100">Time Saved</div>
-          </div>
-          <div class="text-center">
-            <div class="text-4xl font-black text-[#FFD500] mb-2">500+</div>
-            <div class="text-sm text-blue-100">Projects Generated</div>
-          </div>
-          <div class="text-center">
-            <div class="text-4xl font-black text-[#FFD500] mb-2">24/7</div>
-            <div class="text-sm text-blue-100">AI Assistance</div>
+<!-- Stats Bar -->
+        <div class="mt-16 pt-8 border-t border-gray-200">
+          <div class="grid grid-cols-3 gap-8 max-w-2xl">
+            <div>
+              <div class="text-3xl font-bold text-[#003168] mb-1">95%</div>
+              <div class="text-sm text-gray-600">Time Saved</div>
+            </div>
+            <div>
+              <div class="text-3xl font-bold text-[#003168] mb-1">500+</div>
+              <div class="text-sm text-gray-600">Projects Generated</div>
+            </div>
+            <div>
+              <div class="text-3xl font-bold text-[#003168] mb-1">24/7</div>
+              <div class="text-sm text-gray-600">AI Assistance</div>
+            </div>
           </div>
         </div>
       </div>
@@ -132,21 +123,23 @@
   </div>
   
 <!-- Features Section -->
-  <div class="relative bg-white py-24">
-    <div class="container mx-auto px-6">
-      <div class="text-center mb-16">
-        <h2 class="text-5xl font-black text-[#003168] mb-4">Why Architects Love Us</h2>
-        <p class="text-xl text-gray-600 max-w-2xl mx-auto">
-          Enterprise-grade features powered by cutting-edge AI
+  <div class="bg-gray-50 border-b border-gray-200 py-20 lg:py-28">
+    <div class="container mx-auto px-6 lg:px-8">
+      <div class="max-w-3xl mb-16">
+        <h2 class="text-4xl font-bold text-gray-900 mb-4">
+          Enterprise-Grade Features
+        </h2>
+        <p class="text-xl text-gray-600">
+          Built for teams who demand reliability, speed, and precision in their architecture planning.
         </p>
       </div>
 
-      <div class="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+      <div class="grid lg:grid-cols-3 gap-8 max-w-6xl">
         <!-- Feature 1 -->
-        <div class="group bg-gradient-to-br from-blue-50 to-cyan-50 rounded-3xl p-8 hover:shadow-2xl hover:shadow-[#FFD500]/20 transition-all duration-300 hover:-translate-y-2 border-2 border-transparent hover:border-[#FFD500]">
-          <div class="w-16 h-16 bg-gradient-to-br from-[#003168] to-[#004080] rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 shadow-lg">
+        <div class="bg-white border border-gray-200 rounded-lg p-8 hover:border-[#003168] transition-colors duration-200">
+          <div class="w-12 h-12 bg-[#003168] rounded-lg flex items-center justify-center mb-6">
             <svg
-              class="w-8 h-8 text-[#FFD500]"
+              class="w-6 h-6 text-[#FFD500]"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -160,17 +153,17 @@
               </path>
             </svg>
           </div>
-          <h3 class="text-2xl font-bold text-[#003168] mb-4">Lightning Fast</h3>
+          <h3 class="text-xl font-bold text-gray-900 mb-3">Lightning Fast</h3>
           <p class="text-gray-600 leading-relaxed">
             Generate complete architectural plans in minutes. Our AI processes your requirements instantly and delivers production-ready documentation.
           </p>
         </div>
         
 <!-- Feature 2 -->
-        <div class="group bg-gradient-to-br from-blue-50 to-cyan-50 rounded-3xl p-8 hover:shadow-2xl hover:shadow-[#FFD500]/20 transition-all duration-300 hover:-translate-y-2 border-2 border-transparent hover:border-[#FFD500]">
-          <div class="w-16 h-16 bg-gradient-to-br from-[#003168] to-[#004080] rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 shadow-lg">
+        <div class="bg-white border border-gray-200 rounded-lg p-8 hover:border-[#003168] transition-colors duration-200">
+          <div class="w-12 h-12 bg-[#003168] rounded-lg flex items-center justify-center mb-6">
             <svg
-              class="w-8 h-8 text-[#FFD500]"
+              class="w-6 h-6 text-[#FFD500]"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -184,17 +177,17 @@
               </path>
             </svg>
           </div>
-          <h3 class="text-2xl font-bold text-[#003168] mb-4">AI-Powered Insights</h3>
+          <h3 class="text-xl font-bold text-gray-900 mb-3">AI-Powered Insights</h3>
           <p class="text-gray-600 leading-relaxed">
             Leverage GPT-4o-mini to analyze requirements, suggest best practices, and identify potential issues before they become problems.
           </p>
         </div>
         
 <!-- Feature 3 -->
-        <div class="group bg-gradient-to-br from-blue-50 to-cyan-50 rounded-3xl p-8 hover:shadow-2xl hover:shadow-[#FFD500]/20 transition-all duration-300 hover:-translate-y-2 border-2 border-transparent hover:border-[#FFD500]">
-          <div class="w-16 h-16 bg-gradient-to-br from-[#003168] to-[#004080] rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 shadow-lg">
+        <div class="bg-white border border-gray-200 rounded-lg p-8 hover:border-[#003168] transition-colors duration-200">
+          <div class="w-12 h-12 bg-[#003168] rounded-lg flex items-center justify-center mb-6">
             <svg
-              class="w-8 h-8 text-[#FFD500]"
+              class="w-6 h-6 text-[#FFD500]"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -208,7 +201,7 @@
               </path>
             </svg>
           </div>
-          <h3 class="text-2xl font-bold text-[#003168] mb-4">Enterprise Ready</h3>
+          <h3 class="text-xl font-bold text-gray-900 mb-3">Enterprise Ready</h3>
           <p class="text-gray-600 leading-relaxed">
             Bank-level security, scalable infrastructure, and comprehensive documentation. Deploy to Fly.io with a single click.
           </p>
@@ -218,107 +211,106 @@
   </div>
   
 <!-- How It Works Section -->
-  <div class="relative bg-gradient-to-br from-[#003168] via-[#004080] to-[#002850] py-24">
-    <div class="container mx-auto px-6">
-      <div class="text-center mb-16">
-        <h2 class="text-5xl font-black text-white mb-4">How It Works</h2>
-        <p class="text-xl text-blue-100 max-w-2xl mx-auto">
-          From BRD to production in 4 simple steps
+  <div class="bg-white py-20 lg:py-28">
+    <div class="container mx-auto px-6 lg:px-8">
+      <div class="max-w-3xl mb-16">
+        <h2 class="text-4xl font-bold text-gray-900 mb-4">How It Works</h2>
+        <p class="text-xl text-gray-600">
+          From BRD to production-ready architecture in four simple steps.
         </p>
       </div>
 
-      <div class="max-w-5xl mx-auto">
-        <div class="grid md:grid-cols-4 gap-8">
-          <!-- Step 1 -->
-          <div class="text-center">
-            <div class="w-20 h-20 bg-[#FFD500] rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg shadow-[#FFD500]/40">
-              <span class="text-3xl font-black text-[#003168]">1</span>
-            </div>
-            <h3 class="text-xl font-bold text-white mb-3">Upload BRD</h3>
-            <p class="text-blue-100 text-sm">Drop your requirements document or paste text</p>
+      <div class="grid md:grid-cols-4 gap-8 max-w-5xl">
+        <!-- Step 1 -->
+        <div class="relative">
+          <div class="flex items-center justify-center w-12 h-12 bg-[#003168] rounded-full mb-4">
+            <span class="text-xl font-bold text-white">1</span>
           </div>
-          
+          <h3 class="text-lg font-bold text-gray-900 mb-2">Upload BRD</h3>
+          <p class="text-gray-600 text-sm leading-relaxed">
+            Drop your requirements document or paste text directly into the platform.
+          </p>
+          <div class="hidden md:block absolute top-6 left-12 w-full h-0.5 bg-gray-200 -z-10">
+          </div>
+        </div>
+        
 <!-- Step 2 -->
-          <div class="text-center">
-            <div class="w-20 h-20 bg-[#FFD500] rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg shadow-[#FFD500]/40">
-              <span class="text-3xl font-black text-[#003168]">2</span>
-            </div>
-            <h3 class="text-xl font-bold text-white mb-3">AI Analysis</h3>
-            <p class="text-blue-100 text-sm">Answer guided questions about your project</p>
+        <div class="relative">
+          <div class="flex items-center justify-center w-12 h-12 bg-[#003168] rounded-full mb-4">
+            <span class="text-xl font-bold text-white">2</span>
           </div>
-          
+          <h3 class="text-lg font-bold text-gray-900 mb-2">AI Analysis</h3>
+          <p class="text-gray-600 text-sm leading-relaxed">
+            Answer guided questions about your project's requirements and constraints.
+          </p>
+          <div class="hidden md:block absolute top-6 left-12 w-full h-0.5 bg-gray-200 -z-10">
+          </div>
+        </div>
+        
 <!-- Step 3 -->
-          <div class="text-center">
-            <div class="w-20 h-20 bg-[#FFD500] rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg shadow-[#FFD500]/40">
-              <span class="text-3xl font-black text-[#003168]">3</span>
-            </div>
-            <h3 class="text-xl font-bold text-white mb-3">Choose Stack</h3>
-            <p class="text-blue-100 text-sm">Select your preferred technologies</p>
+        <div class="relative">
+          <div class="flex items-center justify-center w-12 h-12 bg-[#003168] rounded-full mb-4">
+            <span class="text-xl font-bold text-white">3</span>
           </div>
-          
+          <h3 class="text-lg font-bold text-gray-900 mb-2">Choose Stack</h3>
+          <p class="text-gray-600 text-sm leading-relaxed">
+            Select your preferred technologies and deployment environment.
+          </p>
+          <div class="hidden md:block absolute top-6 left-12 w-full h-0.5 bg-gray-200 -z-10">
+          </div>
+        </div>
+        
 <!-- Step 4 -->
-          <div class="text-center">
-            <div class="w-20 h-20 bg-[#FFD500] rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg shadow-[#FFD500]/40">
-              <span class="text-3xl font-black text-[#003168]">4</span>
-            </div>
-            <h3 class="text-xl font-bold text-white mb-3">Get Plan</h3>
-            <p class="text-blue-100 text-sm">Receive comprehensive architecture docs</p>
+        <div>
+          <div class="flex items-center justify-center w-12 h-12 bg-[#FFD500] rounded-full mb-4">
+            <span class="text-xl font-bold text-[#003168]">4</span>
           </div>
+          <h3 class="text-lg font-bold text-gray-900 mb-2">Get Plan</h3>
+          <p class="text-gray-600 text-sm leading-relaxed">
+            Receive comprehensive architecture documentation instantly.
+          </p>
         </div>
       </div>
     </div>
   </div>
   
 <!-- CTA Section -->
-  <div class="relative bg-white py-24">
-    <div class="container mx-auto px-6">
-      <div class="max-w-4xl mx-auto bg-gradient-to-br from-[#003168] to-[#004080] rounded-3xl p-12 md:p-16 shadow-2xl relative overflow-hidden">
-        <!-- Background Decoration -->
-        <div class="absolute top-0 right-0 w-64 h-64 bg-[#FFD500] rounded-full -translate-y-1/2 translate-x-1/2 opacity-20 blur-3xl">
-        </div>
-        <div class="absolute bottom-0 left-0 w-64 h-64 bg-cyan-400 rounded-full translate-y-1/2 -translate-x-1/2 opacity-20 blur-3xl">
-        </div>
-
-        <div class="relative z-10 text-center">
-          <h2 class="text-4xl md:text-5xl font-black text-white mb-6">
-            Ready to Transform Your Development Process?
-          </h2>
-          <p class="text-xl text-blue-100 mb-10 max-w-2xl mx-auto">
-            Join hundreds of teams already using AI to accelerate their architecture planning. Start your first project free today.
-          </p>
-          <.link
-            navigate={~p"/projects/new"}
-            class="inline-block px-12 py-6 bg-[#FFD500] hover:bg-amber-400 text-[#003168] rounded-2xl font-bold text-xl shadow-2xl shadow-[#FFD500]/40 hover:shadow-3xl hover:shadow-[#FFD500]/60 transition-all duration-300 hover:scale-110"
-          >
-            Create Your First Project
-            <svg
-              class="inline-block w-6 h-6 ml-2"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+  <div class="bg-gray-900 py-20 lg:py-28">
+    <div class="container mx-auto px-6 lg:px-8">
+      <div class="max-w-4xl mx-auto text-center">
+        <h2 class="text-4xl lg:text-5xl font-bold text-white mb-6">
+          Ready to Transform Your Development Process?
+        </h2>
+        <p class="text-xl text-gray-400 mb-10 max-w-2xl mx-auto">
+          Join hundreds of teams already using AI to accelerate their architecture planning. Start your first project free today.
+        </p>
+        <.link
+          navigate={~p"/projects/new"}
+          class="inline-flex items-center px-10 py-4 bg-[#FFD500] hover:bg-[#FFE44D] text-[#003168] font-bold rounded transition-all duration-200"
+        >
+          Create Your First Project
+          <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M17 8l4 4m0 0l-4 4m4-4H3"
             >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M17 8l4 4m0 0l-4 4m4-4H3"
-              >
-              </path>
-            </svg>
-          </.link>
-        </div>
+            </path>
+          </svg>
+        </.link>
       </div>
     </div>
   </div>
   
 <!-- Footer -->
-  <div class="bg-[#003168] py-12">
-    <div class="container mx-auto px-6">
-      <div class="flex flex-col md:flex-row justify-between items-center">
-        <div class="flex items-center gap-3 mb-6 md:mb-0">
-          <div class="w-10 h-10 bg-[#FFD500] rounded-xl flex items-center justify-center">
+  <div class="border-t border-gray-200 bg-white py-12">
+    <div class="container mx-auto px-6 lg:px-8">
+      <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 bg-[#003168] rounded flex items-center justify-center">
             <svg
-              class="w-6 h-6 text-[#003168]"
+              class="w-5 h-5 text-[#FFD500]"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -332,34 +324,12 @@
               </path>
             </svg>
           </div>
-          <span class="text-xl font-bold text-white">
-            ArchitectureGen<span class="text-[#FFD500]">AI</span>
-          </span>
+          <span class="text-lg font-semibold text-gray-900">ArchitectureGen</span>
         </div>
-        <div class="text-blue-200 text-sm">
+        <div class="text-gray-600 text-sm">
           © 2024 ArchitectureGenAI. Powered by GPT-4o-mini & Phoenix LiveView.
         </div>
       </div>
     </div>
   </div>
 </div>
-
-<style>
-  @keyframes gradient {
-    0%, 100% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-  }
-
-  .animate-gradient {
-    background-size: 200% 200%;
-    animation: gradient 3s ease infinite;
-  }
-
-  .delay-1000 {
-    animation-delay: 1s;
-  }
-
-  .delay-2000 {
-    animation-delay: 2s;
-  }
-</style>
