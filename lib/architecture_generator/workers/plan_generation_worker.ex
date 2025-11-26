@@ -13,7 +13,7 @@ defmodule ArchitectureGenerator.Workers.PlanGenerationWorker do
 
     if project.status != "Queued" do
       Logger.warning("Project #{project_id} is not in Queued status, skipping")
-      {:cancel, "Project not in Queued status"}
+      return({:cancel, "Project not in Queued status"})
     end
 
     try do
