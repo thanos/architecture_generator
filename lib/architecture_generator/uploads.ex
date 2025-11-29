@@ -4,18 +4,19 @@ defmodule ArchitectureGenerator.Uploads do
   """
 
   import Ecto.Query, warn: false
+  require Logger
+
   alias ArchitectureGenerator.Repo
   alias ArchitectureGenerator.Uploads.{Upload, UploadVersion}
   alias ArchitectureGenerator.{DocumentParser, LLMService}
   alias ExAws.S3
 
-  @bucket Application.compile_env(:architecture_generator, :uploads_bucket)
-  @storage_type Application.compile_env(:architecture_generator, :file_storage, :s3)
-  @uploads_dir Application.compile_env(
-                 :architecture_generator,
-                 :uploads_dir,
-                 "priv/static/uploads"
-               )
+  # Removed compile-time module attributes - now using runtime config
+  # This allows configuration to be changed without recompiling
+  defp get_bucket, do: Application.get_env(:architecture_generator, :uploads_bucket)
+  defp get_storage_type, do: Application.get_env(:architecture_generator, :file_storage, :s3)
+  defp get_uploads_dir,
+    do: Application.get_env(:architecture_generator, :uploads_dir, "priv/static/uploads")
 
   @doc """
   Returns the list of uploads.
@@ -59,18 +60,14 @@ defmodule ArchitectureGenerator.Uploads do
 
   """
   def get_upload!(id) do
+    # Repo.get!/1 already raises Ecto.NoResultsError if not found,
+    # so we don't need to handle nil case
     Upload
-    |> preload([:project, :versions])
     |> Repo.get!(id)
-    |> case do
-      nil ->
-        raise Ecto.NoResultsError
-
-      upload ->
-        Repo.preload(upload,
-          versions: from(v in UploadVersion, order_by: [desc: v.version_number])
-        )
-    end
+    |> Repo.preload([
+      :project,
+      versions: from(v in UploadVersion, order_by: [desc: v.version_number])
+    ])
   end
 
   @doc """
@@ -89,7 +86,12 @@ defmodule ArchitectureGenerator.Uploads do
 
   """
   def create_upload(attrs, file_path) do
-    with {:ok, file_binary} <- File.read(file_path),
+    # Check file size first to avoid loading huge files into memory
+    max_size = 100 * 1024 * 1024  # 100 MB limit
+
+    with {:ok, %{size: file_size}} <- File.stat(file_path),
+         :ok <- validate_upload_size(file_size, max_size),
+         {:ok, file_binary} <- File.read(file_path),
          s3_key <-
            Upload.generate_s3_key(
              attrs[:project_id] || attrs["project_id"],
@@ -116,11 +118,22 @@ defmodule ArchitectureGenerator.Uploads do
             case DocumentParser.parse_file(file_path) do
               {:ok, parsed_text} ->
                 case LLMService.enhance_parsed_text(parsed_text, provider: llm_provider) do
-                  {:ok, enhanced_content} -> enhanced_content
-                  {:error, _reason} -> parsed_text
+                  {:ok, enhanced_content} ->
+                    enhanced_content
+
+                  {:error, reason} ->
+                    Logger.warning(
+                      "LLM enhancement failed for file #{attrs[:filename]}: #{inspect(reason)}. Falling back to parsed text."
+                    )
+
+                    parsed_text
                 end
 
-              {:error, _reason} ->
+              {:error, reason} ->
+                Logger.error(
+                  "Document parsing failed for file #{attrs[:filename]}: #{inspect(reason)}"
+                )
+
                 nil
             end
 
@@ -129,8 +142,15 @@ defmodule ArchitectureGenerator.Uploads do
             filename = attrs[:filename] || attrs["filename"]
 
             case LLMService.convert_document_to_brd(file_binary, filename, provider: llm_provider) do
-              {:ok, brd_content} -> brd_content
-              {:error, _reason} -> nil
+              {:ok, brd_content} ->
+                brd_content
+
+              {:error, reason} ->
+                Logger.error(
+                  "LLM conversion failed for file #{filename}: #{inspect(reason)}"
+                )
+
+                nil
             end
 
           _ ->
@@ -145,7 +165,8 @@ defmodule ArchitectureGenerator.Uploads do
       upload_attrs =
         Map.merge(attrs, %{
           s3_key: s3_key,
-          s3_bucket: @bucket
+          s3_bucket: get_bucket(),
+          uploaded_by: attrs[:uploaded_by] || attrs["uploaded_by"]
         })
 
       %Upload{}
@@ -183,7 +204,12 @@ defmodule ArchitectureGenerator.Uploads do
   Returns {:ok, upload, parsed_content} or {:ok, upload, nil} if parsing fails.
   """
   def update_upload(upload, file_path, attrs \\ %{}) do
-    with {:ok, file_binary} <- File.read(file_path),
+    # Check file size first to avoid loading huge files into memory
+    max_size = 100 * 1024 * 1024  # 100 MB limit
+
+    with {:ok, %{size: file_size}} <- File.stat(file_path),
+         :ok <- validate_upload_size(file_size, max_size),
+         {:ok, file_binary} <- File.read(file_path),
          next_version <- upload.current_version + 1,
          s3_key <-
            Upload.generate_s3_key(
@@ -211,7 +237,7 @@ defmodule ArchitectureGenerator.Uploads do
         content_type: attrs[:content_type] || attrs["content_type"] || upload.content_type,
         size_bytes: attrs[:size_bytes] || attrs["size_bytes"] || byte_size(file_binary),
         s3_key: s3_key,
-        s3_bucket: @bucket,
+        s3_bucket: get_bucket(),
         uploaded_by: attrs[:uploaded_by] || attrs["uploaded_by"]
       }
 
@@ -262,8 +288,15 @@ defmodule ArchitectureGenerator.Uploads do
     |> Repo.insert()
   end
 
+  defp validate_upload_size(size, max_size) when size > max_size do
+    Logger.error("File size #{size} bytes exceeds maximum allowed size of #{max_size} bytes")
+    {:error, {:file_too_large, "File size exceeds #{max_size} bytes limit"}}
+  end
+
+  defp validate_upload_size(_size, _max_size), do: :ok
+
   defp upload_to_storage(key, binary, content_type) do
-    case @storage_type do
+    case get_storage_type() do
       :local ->
         upload_to_local(key, binary)
 
@@ -273,7 +306,7 @@ defmodule ArchitectureGenerator.Uploads do
   end
 
   defp delete_from_storage(key) do
-    case @storage_type do
+    case get_storage_type() do
       :local ->
         delete_from_local(key)
 
@@ -284,7 +317,7 @@ defmodule ArchitectureGenerator.Uploads do
 
   # Local file storage operations
   defp upload_to_local(key, binary) do
-    file_path = Path.join(@uploads_dir, key)
+    file_path = Path.join(get_uploads_dir(), key)
     file_dir = Path.dirname(file_path)
 
     with :ok <- File.mkdir_p(file_dir),
@@ -296,7 +329,7 @@ defmodule ArchitectureGenerator.Uploads do
   end
 
   defp delete_from_local(key) do
-    file_path = Path.join(@uploads_dir, key)
+    file_path = Path.join(get_uploads_dir(), key)
 
     case File.rm(file_path) do
       :ok -> {:ok, :local}
@@ -307,12 +340,12 @@ defmodule ArchitectureGenerator.Uploads do
 
   # S3 operations
   defp upload_to_s3(key, binary, content_type) do
-    S3.put_object(@bucket, key, binary, content_type: content_type || "application/octet-stream")
+    S3.put_object(get_bucket(), key, binary, content_type: content_type || "application/octet-stream")
     |> ExAws.request()
   end
 
   defp delete_from_s3(key) do
-    S3.delete_object(@bucket, key)
+    S3.delete_object(get_bucket(), key)
     |> ExAws.request()
   end
 
@@ -320,14 +353,14 @@ defmodule ArchitectureGenerator.Uploads do
   Gets a presigned URL for downloading a file from S3.
   """
   def get_download_url(upload) do
-    case @storage_type do
+    case get_storage_type() do
       :local ->
         # Return a path to the static file
         "/uploads/#{upload.s3_key}"
 
       :s3 ->
         {:ok, url} =
-          S3.presigned_url(ExAws.Config.new(:s3), :get, @bucket, upload.s3_key, expires_in: 3600)
+          S3.presigned_url(ExAws.Config.new(:s3), :get, get_bucket(), upload.s3_key, expires_in: 3600)
 
         url
     end
@@ -337,14 +370,14 @@ defmodule ArchitectureGenerator.Uploads do
   Gets a presigned URL for a specific version.
   """
   def get_version_download_url(version) do
-    case @storage_type do
+    case get_storage_type() do
       :local ->
         # Return a path to the static file
         "/uploads/#{version.s3_key}"
 
       :s3 ->
         {:ok, url} =
-          S3.presigned_url(ExAws.Config.new(:s3), :get, @bucket, version.s3_key, expires_in: 3600)
+          S3.presigned_url(ExAws.Config.new(:s3), :get, get_bucket(), version.s3_key, expires_in: 3600)
 
         url
     end

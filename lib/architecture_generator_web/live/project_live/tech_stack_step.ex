@@ -33,12 +33,24 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.TechStackStep do
       case Projects.save_tech_stack_config(project, tech_stack) do
         {:ok, updated_project} ->
           # Enqueue the Oban job to generate the architectural plan
-          %{project_id: updated_project.id}
-          |> PlanGenerationWorker.new()
+          case %{project_id: updated_project.id}
+               |> PlanGenerationWorker.new()
+               |> Oban.insert() do
+            {:ok, _job} ->
+              send(self(), {:refresh_project, updated_project.id})
+              {:noreply, socket}
+
+            {:error, changeset} ->
+              {:noreply,
+               socket
+               |> put_flash(
+                 :error,
+                 "Failed to enqueue plan generation: #{inspect(changeset.errors)}"
+               )}
+          end
           |> Oban.insert()
 
           send(self(), {:refresh_project, updated_project.id})
-          {:noreply, socket}
 
         {:error, _changeset} ->
           {:noreply, put_flash(socket, :error, "Failed to save tech stack configuration")}

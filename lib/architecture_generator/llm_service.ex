@@ -53,8 +53,21 @@ defmodule ArchitectureGenerator.LLMService do
   end
 
   defp build_model_spec(:openai), do: "openai:gpt-4o-mini"
-  defp build_model_spec(provider) when is_atom(provider), do: "#{provider}:gpt-4o-mini"
-  defp build_model_spec(provider) when is_binary(provider), do: "#{provider}:gpt-4o-mini"
+  defp build_model_spec(:anthropic), do: "anthropic:claude-3-5-sonnet-20241022"
+  defp build_model_spec(:google), do: "google:gemini-1.5-pro"
+
+  # If the provider is already a full model spec (contains :), return as-is
+  defp build_model_spec(provider) when is_binary(provider) do
+    if String.contains?(provider, ":") do
+      provider
+    else
+      # Fallback: assume it's a provider name and use a generic model
+      "#{provider}:default"
+    end
+  end
+
+  # Unknown provider atoms default to openai
+  defp build_model_spec(provider) when is_atom(provider), do: "openai:gpt-4o-mini"
 
   defp call_llm(model_spec, messages) do
     Logger.info("Calling LLM with model: #{inspect(model_spec)}")
