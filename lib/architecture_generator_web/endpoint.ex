@@ -26,6 +26,12 @@ defmodule ArchitectureGeneratorWeb.Endpoint do
     gzip: not code_reloading?,
     only: ArchitectureGeneratorWeb.static_paths()
 
+  # Serve uploaded files from local storage
+  plug Plug.Static,
+    at: "/uploads",
+    from: "priv/static/uploads",
+    gzip: false
+
   # Code reloading can be explicitly enabled under the
   # :code_reloader configuration of your endpoint.
   if code_reloading? do

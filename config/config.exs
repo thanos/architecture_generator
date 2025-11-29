@@ -60,11 +60,15 @@ config :logger, :default_formatter,
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
 
-
 # Configures Swoosh API Client
 config :swoosh, :api_client, Swoosh.ApiClient.Finch
 
 # Configures Oban for background jobs
+
+# File storage configuration (compile-time)
+config :architecture_generator, :file_storage, :local
+config :architecture_generator, :uploads_bucket, "architecture-generator-uploads"
+
 config :architecture_generator, Oban,
   repo: ArchitectureGenerator.Repo,
   plugins: [Oban.Plugins.Pruner],

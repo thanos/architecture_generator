@@ -66,11 +66,14 @@ defmodule ArchitectureGenerator.MixProject do
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.2.0"},
       {:bandit, "~> 1.5"},
-      {:oban, "~> 2.20"}, # Added comma here
+      {:oban, "~> 2.20"},
       {:ex_aws, "~> 2.5"},
       {:ex_aws_s3, "~> 2.5"},
       {:sweet_xml, "~> 0.7"},
-      {:hackney, "~> 1.20"}
+      {:hackney, "~> 1.20"},
+      {:pdf, "~> 0.6"},
+      {:elixir_xml_to_map, "~> 3.0"},
+      {:req_llm, "~> 1.0"}
     ]
   end
 
@@ -87,7 +90,11 @@ defmodule ArchitectureGenerator.MixProject do
       "ecto.reset": ["ecto.drop", "ecto.setup"],
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
       "assets.setup": ["tailwind.install --if-missing", "esbuild.install --if-missing"],
-      "assets.build": ["compile", "tailwind architecture_generator", "esbuild architecture_generator"],
+      "assets.build": [
+        "compile",
+        "tailwind architecture_generator",
+        "esbuild architecture_generator"
+      ],
       "assets.deploy": [
         "tailwind architecture_generator --minify",
         "esbuild architecture_generator --minify",

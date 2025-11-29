@@ -12,6 +12,10 @@ defmodule ArchitectureGenerator.Projects.Project do
     field :llm_job_id, :integer
     field :user_email, :string
 
+    field :processing_mode, :string, default: "parse_only"
+    field :llm_provider, :string
+    field :llm_response, :string
+
     belongs_to :architectural_plan, ArchitectureGenerator.Plans.ArchitecturalPlan
 
     timestamps()
