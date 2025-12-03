@@ -98,6 +98,19 @@ defmodule ArchitectureGenerator.Projects.Project do
   end
 
   @doc """
+  Changeset for going back from Complete to Tech_Stack_Input to create a new version.
+  This allows users to modify their tech stack and regenerate the architectural plan.
+  """
+  def go_back_to_tech_stack_changeset(project) do
+    project
+    |> cast(%{}, [])
+    |> validate_inclusion(:status, ["Complete"])
+    |> put_change(:status, "Tech_Stack_Input")
+    # Optionally clear the architectural_plan_id to allow a new plan to be generated
+    # or keep it to preserve the old plan as a reference
+  end
+
+  @doc """
   Changeset for updating BRD content
   """
   def update_brd_changeset(project, attrs) do

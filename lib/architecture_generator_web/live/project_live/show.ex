@@ -7,6 +7,16 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.Show do
   def mount(%{"id" => id}, _session, socket) do
     project = Projects.get_project!(id)
 
+    # Subscribe to PubSub topic for this project to receive completion notifications
+    if connected?(socket) do
+      Phoenix.PubSub.subscribe(ArchitectureGenerator.PubSub, "project:#{id}")
+
+      # If project is Queued, start polling for status updates (as a fallback to PubSub)
+      if project.status == "Queued" do
+        Process.send_after(self(), {:poll_project_status, id}, 5000)
+      end
+    end
+
     socket =
       socket
       |> assign(:project, project)
@@ -52,6 +62,69 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.Show do
       parsed_content_preview: preview
     )
     {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info({:project_completed, updated_project}, socket) do
+    # Project generation completed - refresh the project to show Complete step
+    require Logger
+    Logger.info("ProjectLive.Show: Received project_completed notification for project #{updated_project.id}")
+
+    # Reload project to get the latest data including architectural_plan
+    project =
+      updated_project.id
+      |> Projects.get_project!()
+      |> ArchitectureGenerator.Repo.preload(:architectural_plan)
+
+    {:noreply,
+     socket
+     |> assign(:project, project)
+     |> put_flash(:info, "Architectural plan generated successfully!")}
+  end
+
+  @impl true
+  def handle_info({:project_error, error_project}, socket) do
+    # Project generation failed - refresh the project to show Error step
+    require Logger
+    Logger.error("ProjectLive.Show: Received project_error notification for project #{error_project.id}")
+
+    # Reload project to get the latest status
+    project = Projects.get_project!(error_project.id)
+
+    {:noreply,
+     socket
+     |> assign(:project, project)
+     |> put_flash(:error, "An error occurred while generating your architectural plan.")}
+  end
+
+  @impl true
+  def handle_info({:poll_project_status, project_id}, socket) do
+    # Polling mechanism as a fallback to PubSub
+    # Check if project status has changed
+    project = Projects.get_project!(project_id)
+
+    if project.status != "Queued" do
+      # Status changed - update the socket
+      require Logger
+      Logger.info("ProjectLive.Show: Project #{project_id} status changed to #{project.status} (via polling)")
+
+      # Preload architectural_plan if status is Complete
+      updated_project =
+        if project.status == "Complete" do
+          ArchitectureGenerator.Repo.preload(project, :architectural_plan)
+        else
+          project
+        end
+
+      {:noreply,
+       socket
+       |> assign(:project, updated_project)
+       |> put_flash(:info, "Project status updated")}
+    else
+      # Still queued - schedule another check
+      Process.send_after(self(), {:poll_project_status, project_id}, 5000)
+      {:noreply, socket}
+    end
   end
 
   @impl true

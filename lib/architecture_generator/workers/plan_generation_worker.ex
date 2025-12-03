@@ -17,6 +17,7 @@ defmodule ArchitectureGenerator.Workers.PlanGenerationWorker do
   alias ArchitectureGenerator.{Projects, Plans, LLMService}
 
   require Logger
+  alias Phoenix.PubSub
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"project_id" => project_id}}) do
@@ -39,100 +40,45 @@ defmodule ArchitectureGenerator.Workers.PlanGenerationWorker do
           project_id: project.id
         })
 
-      {:ok, _project} = Projects.complete_project(project, architectural_plan.id)
+      {:ok, updated_project} = Projects.complete_project(project, architectural_plan.id)
 
       Logger.info("Successfully generated LLM-based plan for project #{project_id}")
+
+      # Broadcast to PubSub to notify any LiveView watching this project
+      PubSub.broadcast(
+        ArchitectureGenerator.PubSub,
+        "project:#{project_id}",
+        {:project_completed, updated_project}
+      )
+
       :ok
     rescue
       error ->
         Logger.error("Failed to generate plan for project #{project_id}: #{inspect(error)}")
-        Projects.mark_project_error(project)
+        {:ok, error_project} = Projects.mark_project_error(project)
+
+        # Broadcast error to PubSub to notify any LiveView watching this project
+        PubSub.broadcast(
+          ArchitectureGenerator.PubSub,
+          "project:#{project_id}",
+          {:project_error, error_project}
+        )
+
         {:error, error}
     end
   end
 
   defp generate_plan_with_llm(project) do
+    # Workflow:
+    # 1. BRD is stored in project.brd_content (input only, not saved as artifact)
+    # 2. Elicitation data is stored in project.elicitation_data (input only)
+    # 3. Tech stack is stored in project.tech_stack_config (input only)
+    # 4. Build context from all inputs and send to LLM
+    # 5. LLM generates architectural document (output)
+    # 6. Architectural document is saved as artifact (via LLMService.generate_architectural_plan)
 
+    # Build the full project context for the LLM (BRD + Elicitation + Tech Stack)
     context = """
-    You are a senior software architect with extensive experience designing scalable,
-    secure, and maintainable software systems.
-
-    Based on the project information provided below, create a comprehensive Architectural Plan
-    in Markdown format that includes:
-
-    1. **Executive Summary** (2-3 paragraphs)
-       - Project overview and key objectives
-       - Critical architectural decisions
-       - Expected outcomes
-
-    2. **System Architecture Overview**
-       - High-level architecture pattern (monolith, microservices, etc.)
-       - Major components and their responsibilities
-       - Data flow between components
-
-    3. **Technology Stack Justification**
-       - Why each chosen technology fits the requirements
-       - Key trade-offs and considerations
-       - How they work together
-
-    4. **Scalability & Performance Strategy**
-       - How the system will handle expected load
-       - Caching strategies (CDN, application, database)
-       - Database optimization approaches
-       - Load balancing and auto-scaling plans
-
-    5. **Security Architecture**
-       - Authentication and authorization approach
-       - Data encryption (in transit and at rest)
-       - Compliance requirements implementation
-       - API security measures
-
-    6. **Integration Architecture**
-       - Third-party service integration patterns
-       - API design approach
-       - Error handling and retry logic
-       - Circuit breakers and fallbacks
-
-    7. **Data Architecture**
-       - Database schema design approach
-       - Data modeling strategy
-       - Backup and disaster recovery
-       - Data retention and archival
-
-    8. **Deployment Architecture**
-       - CI/CD pipeline design
-       - Environment strategy (dev/staging/prod)
-       - Monitoring and observability
-       - Logging and alerting
-
-    9. **Development Workflow**
-       - Recommended project structure
-       - Testing strategy (unit, integration, e2e)
-       - Code quality and review process
-
-    10. **Risk Assessment & Mitigation**
-        - Identified technical risks
-        - Mitigation strategies
-        - Contingency plans
-
-    11. **Implementation Phases**
-        - Phase 1: MVP/Core features with timeline
-        - Phase 2: Enhanced features with timeline
-        - Phase 3: Optimization and scaling with timeline
-
-    12. **Success Metrics**
-        - KPIs to measure system success
-        - Performance benchmarks
-        - User experience metrics
-
-    Be specific and professional. Provide concrete recommendations based on industry
-    best practices and the specific requirements provided. Use proper Markdown formatting
-    with headers, lists, and code blocks where appropriate.
-
-    The plan should be detailed enough for a development team to begin implementation
-    with clear guidance on architectural decisions.
-
-    # Business Requirements Document
     # Business Requirements Document
     #{project.brd_content || "No BRD provided"}
 
@@ -143,20 +89,38 @@ defmodule ArchitectureGenerator.Workers.PlanGenerationWorker do
     #{format_tech_stack(project.tech_stack_config)}
     """
 
-    case LLMService.enhance_parsed_text(context,
-           provider: :openai,
+    # Use the project's llm_provider, defaulting to :openai if not set
+    provider =
+      case project.llm_provider do
+        nil -> :openai
+        "" -> :openai
+        provider when is_binary(provider) ->
+          # Try to convert to atom, fallback to :openai if conversion fails
+          try do
+            String.to_existing_atom(provider)
+          rescue
+            ArgumentError -> :openai
+          end
+        provider when is_atom(provider) -> provider
+        _ -> :openai
+      end
+
+    # Generate architectural document from BRD + elicitation + tech stack
+    # The LLMService will save the architectural document (not the BRD) as an artifact
+    case LLMService.generate_architectural_plan(context,
+           provider: provider,
            project_id: project.id,
            category: "Architectural Document",
            title: "Architectural Plan: #{project.name}"
          ) do
       {:ok, plan_content} ->
+        # plan_content is the generated architectural document (12+ pages)
+        # This has already been saved as an artifact by LLMService.generate_architectural_plan
         plan_content
 
       {:error, reason} ->
         Logger.warning(
-
           "LLM generation failed for project #{project.id}, using fallback: #{inspect(reason)}"
-
         )
 
         generate_fallback_plan(project)
@@ -319,12 +283,4 @@ defmodule ArchitectureGenerator.Workers.PlanGenerationWorker do
     - **Monitoring**: Centralized logging and distributed tracing
     """
   end
-
-  defp extract_elicitation_value(data, key_variants) when is_map(data) do
-    Enum.find_value(key_variants, "not specified", fn key ->
-      Map.get(data, key)
-    end)
-  end
-
-  defp extract_elicitation_value(_, _), do: "not specified"
 end

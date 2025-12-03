@@ -42,4 +42,13 @@ defmodule ArchitectureGenerator.Artifacts.LlmArtifact do
   def create_changeset(llm_artifact, attrs) do
     changeset(llm_artifact, attrs)
   end
+
+
+  @doc """
+  Changeset for updating an LLM artifact
+  """
+  def update_changeset(llm_artifact, attrs) do
+    changeset(llm_artifact, attrs)
+  end
+
 end

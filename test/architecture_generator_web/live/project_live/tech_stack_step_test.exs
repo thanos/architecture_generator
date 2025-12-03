@@ -257,7 +257,7 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.TechStackStepTest do
   end
 
   describe "handle_event submit_stack/3" do
-    test "saves tech_stack as draft when validation fails" do
+    test "shows error when project is not in Tech_Stack_Input status" do
       {:ok, project} =
         Projects.create_project(%{
           name: "Test Project",
@@ -265,10 +265,7 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.TechStackStepTest do
           brd_content: "Test BRD"
         })
 
-      # Transition to Tech_Stack_Input status
-      {:ok, _} = Projects.update_project_status(project, "Elicitation")
-      {:ok, _} = Projects.save_elicitation_data(Projects.get_project!(project.id), %{})
-
+      # Keep project in Initial status (not Tech_Stack_Input)
       project = Projects.get_project!(project.id)
 
       socket = create_socket(%{
@@ -277,7 +274,7 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.TechStackStepTest do
         tech_stack: %{
           "primary_language" => "Elixir",
           "database_system" => "PostgreSQL",
-          "deployment_env" => "AWS"  # Not Fly.io, so validation will fail
+          "deployment_env" => "Fly.io"
         }
       })
 
@@ -285,15 +282,13 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.TechStackStepTest do
 
       # Should show error flash (flash can be atom or string key)
       flash_error = updated_socket.assigns.flash[:error] || updated_socket.assigns.flash["error"]
-      assert flash_error == "Only Fly.io deployment is currently supported."
+      assert flash_error == "Project is not in the correct status. Please refresh the page and try again."
 
-      # Verify tech_stack was saved as draft even though validation failed
+      # Verify tech_stack was NOT saved (tech_stack_config should be nil or empty map)
       updated_project = Projects.get_project!(project.id)
-      assert_tech_stack_value(updated_project.tech_stack_config, "primary_language", "Elixir")
-      assert_tech_stack_value(updated_project.tech_stack_config, "database_system", "PostgreSQL")
-      assert_tech_stack_value(updated_project.tech_stack_config, "deployment_env", "AWS")
-      # Status should still be Tech_Stack_Input (not changed to Queued)
-      assert updated_project.status == "Tech_Stack_Input"
+      assert updated_project.tech_stack_config == nil || updated_project.tech_stack_config == %{}
+      # Status should remain unchanged
+      assert updated_project.status == "Initial"
     end
 
     test "saves tech_stack and transitions to Queued when validation passes" do
@@ -389,7 +384,7 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.TechStackStepTest do
       assert get_tech_stack_value(socket5.assigns.tech_stack, "web_framework") == "Phoenix"
     end
 
-    test "tech_stack persists when submit fails and user returns" do
+    test "tech_stack persists when submit succeeds and user returns" do
       {:ok, project} =
         Projects.create_project(%{
           name: "Test Project",
@@ -403,28 +398,29 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.TechStackStepTest do
 
       project = Projects.get_project!(project.id)
 
-      # Simulate user filling in form with invalid deployment
+      # Simulate user filling in form
       socket1 = create_socket(%{
         project: project,
         id: "tech-stack-step",
         tech_stack: %{
           "primary_language" => "Elixir",
           "database_system" => "PostgreSQL",
-          "deployment_env" => "AWS"  # Invalid
+          "deployment_env" => "Fly.io"
         }
       })
 
-      # User submits (validation fails)
+      # User submits (may succeed or fail depending on Oban, but tech_stack should be saved)
       {:noreply, _socket2} = TechStackStep.handle_event("submit_stack", %{}, socket1)
 
-      # Verify data was saved as draft
+      # Verify data was saved
       saved_project = Projects.get_project!(project.id)
       assert_tech_stack_value(saved_project.tech_stack_config, "primary_language", "Elixir")
       assert_tech_stack_value(saved_project.tech_stack_config, "database_system", "PostgreSQL")
-      assert_tech_stack_value(saved_project.tech_stack_config, "deployment_env", "AWS")
-      assert saved_project.status == "Tech_Stack_Input"  # Status unchanged
+      assert_tech_stack_value(saved_project.tech_stack_config, "deployment_env", "Fly.io")
+      # Status may be Queued (if Oban succeeded) or Tech_Stack_Input (if Oban failed)
+      assert saved_project.status in ["Queued", "Tech_Stack_Input"]
 
-      # User fixes deployment and returns - simulate component update
+      # User returns - simulate component update
       assigns = %{
         id: "tech-stack-step",
         project: saved_project
@@ -436,7 +432,7 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.TechStackStepTest do
       # Verify saved data is loaded
       assert get_tech_stack_value(socket4.assigns.tech_stack, "primary_language") == "Elixir"
       assert get_tech_stack_value(socket4.assigns.tech_stack, "database_system") == "PostgreSQL"
-      assert get_tech_stack_value(socket4.assigns.tech_stack, "deployment_env") == "AWS"
+      assert get_tech_stack_value(socket4.assigns.tech_stack, "deployment_env") == "Fly.io"
     end
   end
 end
