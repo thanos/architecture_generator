@@ -143,8 +143,12 @@ defmodule ArchitectureGenerator.Workers.PlanGenerationWorker do
     #{format_tech_stack(project.tech_stack_config)}
     """
 
-    case LLMService.enhance_parsed_text(context, provider: :openai) do
-
+    case LLMService.enhance_parsed_text(context,
+           provider: :openai,
+           project_id: project.id,
+           category: "Architectural Document",
+           title: "Architectural Plan: #{project.name}"
+         ) do
       {:ok, plan_content} ->
         plan_content
 

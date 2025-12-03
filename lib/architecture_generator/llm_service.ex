@@ -4,6 +4,7 @@ defmodule ArchitectureGenerator.LLMService do
   """
 
   require Logger
+  alias ArchitectureGenerator.Artifacts
 
   @doc """
   Converts a raw document to a canonical best-practice BRD using an LLM.
@@ -27,7 +28,15 @@ defmodule ArchitectureGenerator.LLMService do
       %{role: "user", content: user_content}
     ]
 
-    call_llm(model_spec, messages)
+    # Pass artifact metadata to call_llm
+    artifact_opts = [
+      project_id: Keyword.get(opts, :project_id),
+      type: "doc",
+      category: "Function Requirement Document",
+      title: "BRD Conversion: #{filename}"
+    ]
+
+    call_llm(model_spec, messages, artifact_opts)
   end
 
   @doc """
@@ -49,7 +58,15 @@ defmodule ArchitectureGenerator.LLMService do
       %{role: "user", content: parsed_text}
     ]
 
-    call_llm(model_spec, messages)
+    # Pass artifact metadata to call_llm
+    artifact_opts = [
+      project_id: Keyword.get(opts, :project_id),
+      type: "doc",
+      category: Keyword.get(opts, :category, "Function Requirement Document"),
+      title: Keyword.get(opts, :title, "Enhanced BRD")
+    ]
+
+    call_llm(model_spec, messages, artifact_opts)
   end
 
   defp build_model_spec(:openai), do: "openai:gpt-4o-mini"
@@ -69,13 +86,20 @@ defmodule ArchitectureGenerator.LLMService do
   # Unknown provider atoms default to openai
   defp build_model_spec(provider) when is_atom(provider), do: "openai:gpt-4o-mini"
 
-  defp call_llm(model_spec, messages) do
+  defp call_llm(model_spec, messages, opts \\ []) do
     Logger.info("Calling LLM with model: #{inspect(model_spec)}")
+
+    # Extract full prompt from messages for artifact storage
+    full_prompt = build_full_prompt_from_messages(messages)
 
     case ReqLLM.generate_text(model_spec, messages, temperature: 0.7, max_tokens: 4000) do
       {:ok, %ReqLLM.Response{message: message}} ->
         content = extract_text_from_message(message)
         Logger.info("Successfully generated BRD from LLM")
+
+        # Store artifact if project_id and metadata are provided
+        store_artifact_if_requested(content, full_prompt, opts)
+
         {:ok, content}
 
       {:error, reason} ->
@@ -90,6 +114,44 @@ defmodule ArchitectureGenerator.LLMService do
     error ->
       Logger.error("Exception calling LLM: #{inspect(error)}")
       {:error, {:exception, error}}
+  end
+
+  defp build_full_prompt_from_messages(messages) do
+    messages
+    |> Enum.map(fn
+      %{role: role, content: content} ->
+        "#{String.upcase(to_string(role))}:\n#{content}"
+      _ ->
+        ""
+    end)
+    |> Enum.filter(&(&1 != ""))
+    |> Enum.join("\n\n---\n\n")
+  end
+
+  defp store_artifact_if_requested(content, full_prompt, opts) do
+    project_id = Keyword.get(opts, :project_id)
+    type = Keyword.get(opts, :type, "doc")
+    category = Keyword.get(opts, :category, "Other")
+    title = Keyword.get(opts, :title, "LLM Response")
+
+    if project_id do
+      case Artifacts.create_artifact(%{
+             project_id: project_id,
+             type: type,
+             category: category,
+             title: title,
+             content: content,
+             prompt: full_prompt
+           }) do
+        {:ok, artifact} ->
+          Logger.info("Stored LLM artifact #{artifact.id} for project #{project_id}")
+
+        {:error, changeset} ->
+          Logger.warning(
+            "Failed to store LLM artifact for project #{project_id}: #{inspect(changeset.errors)}"
+          )
+      end
+    end
   end
 
   defp extract_text_from_message(%ReqLLM.Message{content: content}) when is_list(content) do

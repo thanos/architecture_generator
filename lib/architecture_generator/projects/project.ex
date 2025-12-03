@@ -17,6 +17,7 @@ defmodule ArchitectureGenerator.Projects.Project do
     field :llm_response, :string
 
     belongs_to :architectural_plan, ArchitectureGenerator.Plans.ArchitecturalPlan
+    has_many :llm_artifacts, ArchitectureGenerator.Artifacts.LlmArtifact
 
     timestamps()
   end
