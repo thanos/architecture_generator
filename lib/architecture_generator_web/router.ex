@@ -1,6 +1,8 @@
 defmodule ArchitectureGeneratorWeb.Router do
   use ArchitectureGeneratorWeb, :router
 
+  import Oban.Web.Router
+
   pipeline :browser do
     plug :accepts, ["html"]
     plug :fetch_session
@@ -14,6 +16,22 @@ defmodule ArchitectureGeneratorWeb.Router do
     plug :accepts, ["json"]
   end
 
+  pipeline :admin do
+    plug :accepts, ["html"]
+    plug :fetch_session
+    plug :put_root_layout, html: {ArchitectureGeneratorWeb.Layouts, :root}
+    plug :protect_from_forgery
+    plug :put_secure_browser_headers
+    plug :basic_auth
+  end
+
+  defp basic_auth(conn, _opts) do
+    username = System.get_env("OBAN_WEB_USERNAME") || "admin"
+    password = System.get_env("OBAN_WEB_PASSWORD") || "admin"
+
+    Plug.BasicAuth.basic_auth(conn, username: username, password: password)
+  end
+
   scope "/", ArchitectureGeneratorWeb do
     pipe_through :browser
 
@@ -23,6 +41,13 @@ defmodule ArchitectureGeneratorWeb.Router do
     live "/projects/:id", ProjectLive.Show
     live "/uploads", UploadLive.Index, :index
     live "/uploads/:id", UploadLive.Show, :show
+  end
+
+  # Oban Web Interface for monitoring background jobs
+  scope "/admin" do
+    pipe_through :admin
+
+    oban_dashboard "/oban"
   end
 
   # Other scopes may use custom stacks.

@@ -71,7 +71,10 @@ config :architecture_generator, :uploads_bucket, "architecture-generator-uploads
 
 config :architecture_generator, Oban,
   repo: ArchitectureGenerator.Repo,
-  # plugins: [Oban.Plugins.Pruner],
+  plugins: [
+    Oban.Plugins.Gossip,
+    Oban.Web.Plugins.Stats
+  ],
   queues: [default: 10]
 
 # Import environment specific config. This must remain at the bottom
