@@ -42,20 +42,7 @@ defmodule ArchitectureGenerator.Workers.PlanGenerationWorker do
       {:ok, _project} = Projects.complete_project(project, architectural_plan.id)
 
       Logger.info("Successfully generated LLM-based plan for project #{project_id}")
-
-
-          case Projects.mark_project_error(project) do
-            {:ok, _project} ->
-              :ok
-
-            {:error, error_changeset} ->
-              Logger.error(
-                "Failed to mark project #{project.id} as error: #{inspect(error_changeset.errors)}"
-              )
-          end
-
-          {:error, changeset}
-
+      :ok
     rescue
       error ->
         Logger.error("Failed to generate plan for project #{project_id}: #{inspect(error)}")
