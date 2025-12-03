@@ -26,7 +26,7 @@ defmodule ArchitectureGenerator.Projects.Project do
   """
   def create_changeset(project, attrs) do
     project
-    |> cast(attrs, [:name, :user_email, :brd_content, :brd_file_path])
+    |> cast(attrs, [:name, :user_email, :brd_content, :brd_file_path, :processing_mode, :llm_provider])
     |> validate_required([:name, :user_email])
     |> validate_format(:user_email, ~r/^[^\s]+@[^\s]+$/, message: "must be a valid email")
     # |> validate_brd_content()
@@ -67,6 +67,16 @@ defmodule ArchitectureGenerator.Projects.Project do
   end
 
   @doc """
+  Changeset for saving tech stack config as draft (without changing status)
+  """
+  def update_tech_stack_changeset(project, tech_stack_config) do
+    project
+    |> cast(%{}, [])
+    |> validate_inclusion(:status, ["Tech_Stack_Input"])
+    |> put_change(:tech_stack_config, tech_stack_config)
+  end
+
+  @doc """
   Changeset for marking as complete with architectural plan
   """
   def complete_changeset(project, architectural_plan_id) do
@@ -93,6 +103,16 @@ defmodule ArchitectureGenerator.Projects.Project do
     project
     |> cast(attrs, [:brd_content, :brd_file_path])
     |> validate_brd_content()
+  end
+
+  @doc """
+  Changeset for saving draft BRD inputs (brd_content, processing_mode, llm_provider)
+  without changing status. Used to persist user inputs when navigating away.
+  """
+  def save_draft_brd_changeset(project, attrs) do
+    project
+    |> cast(attrs, [:brd_content, :processing_mode, :llm_provider])
+    # Don't validate required fields for drafts - allow partial saves
   end
 
   defp validate_brd_content(changeset) do

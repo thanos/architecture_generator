@@ -28,6 +28,8 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.TechStackStep do
 
     # Check if deployment_env is "Fly.io"
     if Map.get(tech_stack, "deployment_env") != "Fly.io" do
+      # Save as draft even if validation fails, so user's inputs are preserved
+      Projects.update_tech_stack_config(project, tech_stack)
       {:noreply, put_flash(socket, :error, "Only Fly.io deployment is currently supported.")}
     else
       case Projects.save_tech_stack_config(project, tech_stack) do
@@ -58,14 +60,31 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.TechStackStep do
   @impl true
   def handle_event("go_back", _params, socket) do
     project = socket.assigns.project
+    tech_stack = socket.assigns.tech_stack
 
-    case Projects.go_back_to_status(project, "Elicitation") do
-      {:ok, _updated_project} ->
-        send(self(), {:refresh_project, project.id})
-        {:noreply, socket}
+    # Save tech stack as draft before going back so user's inputs are preserved
+    case Projects.update_tech_stack_config(project, tech_stack) do
+      {:ok, updated_project} ->
+        # Now go back to Elicitation
+        case Projects.go_back_to_status(updated_project, "Elicitation") do
+          {:ok, _final_project} ->
+            send(self(), {:refresh_project, updated_project.id})
+            {:noreply, socket}
 
-      {:error, _reason} ->
-        {:noreply, put_flash(socket, :error, "Failed to go back to previous step")}
+          {:error, _reason} ->
+            {:noreply, put_flash(socket, :error, "Failed to go back to previous step")}
+        end
+
+      {:error, _changeset} ->
+        # Even if saving draft fails, try to go back anyway
+        case Projects.go_back_to_status(project, "Elicitation") do
+          {:ok, _updated_project} ->
+            send(self(), {:refresh_project, project.id})
+            {:noreply, socket}
+
+          {:error, _reason} ->
+            {:noreply, put_flash(socket, :error, "Failed to go back to previous step")}
+        end
     end
   end
 

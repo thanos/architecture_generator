@@ -28,6 +28,9 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.Show do
   @impl true
   def handle_info({:refresh_project, project_id}, socket) do
     project = Projects.get_project!(project_id)
+    # Update the project, which will trigger InitialStep component update
+    # The InitialStep component will preserve existing processing_mode and llm_provider
+    # if they're set in socket assigns, otherwise it will use the project values
     {:noreply, assign(socket, :project, project)}
   end
 

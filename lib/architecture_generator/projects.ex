@@ -98,6 +98,15 @@ defmodule ArchitectureGenerator.Projects do
   end
 
   @doc """
+  Updates tech stack configuration without changing status (for draft saves).
+  """
+  def update_tech_stack_config(project, tech_stack_config) do
+    project
+    |> Project.update_tech_stack_changeset(tech_stack_config)
+    |> Repo.update()
+  end
+
+  @doc """
   Marks a project as complete with the architectural plan ID.
   """
   def complete_project(project, architectural_plan_id) do
@@ -121,6 +130,16 @@ defmodule ArchitectureGenerator.Projects do
   def update_brd_content(project, attrs) do
     project
     |> Project.update_brd_changeset(attrs)
+    |> Repo.update()
+  end
+
+  @doc """
+  Saves draft BRD inputs (brd_content, processing_mode, llm_provider) without changing status.
+  Used to persist user inputs when they navigate away or refresh the page.
+  """
+  def save_draft_brd_inputs(project, attrs) do
+    project
+    |> Project.save_draft_brd_changeset(attrs)
     |> Repo.update()
   end
 
