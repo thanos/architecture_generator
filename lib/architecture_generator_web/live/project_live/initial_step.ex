@@ -8,12 +8,16 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.InitialStep do
     socket =
       if Map.has_key?(assigns, :project) do
         # Full update - project data is provided
+        # Always reload project from database to get the latest saved values
+        # This ensures that any values saved by validate_form are loaded
+        project = Projects.get_project!(assigns.project.id)
+
         socket
-        |> assign(:project, assigns.project)
+        |> assign(:project, project)
         |> assign(:id, assigns.id)
-        |> assign(:brd_text, assigns.project.brd_content || "")
-        |> assign(:processing_mode, assigns.project.processing_mode || "parse_only")
-        |> assign(:llm_provider, assigns.project.llm_provider || "openai")
+        |> assign(:brd_text, project.brd_content || "")
+        |> assign(:processing_mode, project.processing_mode || "parse_only")
+        |> assign(:llm_provider, project.llm_provider || "openai")
         |> assign(:parsing_status, nil)
         |> assign(:parsed_content_preview, nil)
         |> allow_upload(:brd_file,
@@ -51,21 +55,54 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.InitialStep do
     {:ok, socket}
   end
 
-  def handle_event("validate_brd", %{"brd_text" => brd_text}, socket) do
-    {:noreply, assign(socket, :brd_text, brd_text)}
-  end
+  def handle_event("validate_form", params, socket) do
+    # Save ALL form values together whenever ANY field changes
+    # This ensures all settings persist regardless of which field was changed
+    project = socket.assigns.project
 
-  def handle_event("validate_processing_mode", params, socket) do
-    processing_mode = Map.get(params, "processing_mode", "parse_only")
-    llm_provider = Map.get(params, "llm_provider", "openai")
+    # Get values from params or fall back to socket assigns
+    brd_text = Map.get(params, "brd_text", socket.assigns.brd_text || "")
+    processing_mode = Map.get(params, "processing_mode", socket.assigns.processing_mode || "parse_only")
+    llm_provider = Map.get(params, "llm_provider", socket.assigns.llm_provider || "openai")
+
+    # Save all values together to database
+    Projects.save_draft_brd_inputs(project, %{
+      brd_content: brd_text,
+      processing_mode: processing_mode,
+      llm_provider: llm_provider
+    })
 
     {:noreply,
      socket
+     |> assign(:brd_text, brd_text)
      |> assign(:processing_mode, processing_mode)
      |> assign(:llm_provider, llm_provider)}
   end
 
+  # Keep the old handler names for backward compatibility, but route to validate_form
+  def handle_event("validate_brd", params, socket) do
+    handle_event("validate_form", params, socket)
+  end
+
+  def handle_event("validate_processing_mode", params, socket) do
+    handle_event("validate_form", params, socket)
+  end
+
   def handle_event("validate_upload", _params, socket) do
+    # Save ALL form values when a file is selected/uploaded
+    # to ensure they persist even if the component gets re-rendered
+    project = socket.assigns.project
+    brd_text = socket.assigns.brd_text || ""
+    processing_mode = socket.assigns.processing_mode || "parse_only"
+    llm_provider = socket.assigns.llm_provider || "openai"
+
+    # Save all values together
+    Projects.save_draft_brd_inputs(project, %{
+      brd_content: brd_text,
+      processing_mode: processing_mode,
+      llm_provider: llm_provider
+    })
+
     {:noreply, socket}
   end
 
@@ -83,6 +120,16 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.InitialStep do
       consume_uploaded_entries(socket, :brd_file, fn %{path: path}, entry ->
         # Set parsing status
         send(self(), {:update_parsing_status, "Processing #{entry.client_name}..."})
+
+        # Ensure processing_mode and llm_provider are saved before processing the file
+        # This ensures they persist even if the component gets re-rendered
+        Projects.save_draft_brd_inputs(project, %{
+          processing_mode: processing_mode,
+          llm_provider: llm_provider
+        })
+
+        # Reload project to get the latest values
+        project = Projects.get_project!(project.id)
 
         # Create upload record and store file in S3
         case Uploads.create_upload(
@@ -173,7 +220,7 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.InitialStep do
         Our AI will analyze it to generate a comprehensive architectural plan.
       </p>
 
-      <form phx-change="validate_brd" phx-submit="submit_brd" phx-target={@myself} id="brd-form">
+      <form phx-change="validate_form" phx-submit="submit_brd" phx-target={@myself} id="brd-form">
         <!-- BRD Text Area -->
         <div class="mb-6">
           <label for="brd-text" class="block text-sm font-medium text-slate-700 mb-2">
@@ -204,7 +251,7 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.InitialStep do
             🤖 AI Processing Options
           </h3>
 
-          <div class="space-y-4" phx-change="validate_processing_mode" phx-target={@myself}>
+          <div class="space-y-4" phx-change="validate_form" phx-target={@myself}>
             <!-- Parse Only -->
             <label class="flex items-start gap-3 cursor-pointer">
               <input
