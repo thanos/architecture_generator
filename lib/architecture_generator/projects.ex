@@ -162,6 +162,16 @@ defmodule ArchitectureGenerator.Projects do
     end
   end
 
+  @doc """
+  Goes back from Complete status to Tech_Stack_Input to create a new version.
+  This allows users to modify their tech stack and regenerate the architectural plan.
+  """
+  def go_back_to_tech_stack_for_new_version(project) do
+    project
+    |> Project.go_back_to_tech_stack_changeset()
+    |> Repo.update()
+  end
+
   defp status_to_step(status) do
     case status do
       "Initial" -> 1

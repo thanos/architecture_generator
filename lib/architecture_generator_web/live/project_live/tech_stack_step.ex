@@ -23,26 +23,47 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.TechStackStep do
 
   @impl true
   def handle_event("submit_stack", _params, socket) do
+    require Logger
+
     project = socket.assigns.project
     tech_stack = socket.assigns.tech_stack
 
-    # Check if deployment_env is "Fly.io"
-    if Map.get(tech_stack, "deployment_env") != "Fly.io" do
-      # Save as draft even if validation fails, so user's inputs are preserved
-      Projects.update_tech_stack_config(project, tech_stack)
-      {:noreply, put_flash(socket, :error, "Only Fly.io deployment is currently supported.")}
+    Logger.info("TechStackStep: submit_stack called for project #{project.id}")
+    Logger.info("TechStackStep: project status = #{project.status}")
+    Logger.info("TechStackStep: tech_stack = #{inspect(tech_stack)}")
+
+    # Verify project is in the correct status before saving
+    if project.status != "Tech_Stack_Input" do
+      Logger.error("TechStackStep: Project #{project.id} is not in Tech_Stack_Input status (current: #{project.status})")
+      {:noreply,
+       socket
+       |> put_flash(
+         :error,
+         "Project is not in the correct status. Please refresh the page and try again."
+       )}
     else
+      Logger.info("TechStackStep: saving tech stack config and creating Oban job")
+
       case Projects.save_tech_stack_config(project, tech_stack) do
         {:ok, updated_project} ->
+          Logger.info("TechStackStep: tech stack saved, project status = #{updated_project.status}")
+          Logger.info("TechStackStep: creating Oban job for project #{updated_project.id}")
+
           # Enqueue the Oban job to generate the architectural plan
-          case %{project_id: updated_project.id}
-               |> PlanGenerationWorker.new()
-               |> Oban.insert() do
-            {:ok, _job} ->
+          job = PlanGenerationWorker.new(%{project_id: updated_project.id})
+          Logger.info("TechStackStep: job created: #{inspect(job)}")
+
+          case Oban.insert(job) do
+            {:ok, inserted_job} ->
+              Logger.info("TechStackStep: Oban job inserted successfully with ID: #{inserted_job.id}")
               send(self(), {:refresh_project, updated_project.id})
-              {:noreply, socket}
+              {:noreply,
+               socket
+               |> put_flash(:info, "Plan generation job queued successfully. This may take a few minutes.")}
 
             {:error, changeset} ->
+              Logger.error("TechStackStep: Failed to insert Oban job: #{inspect(changeset.errors)}")
+              Logger.error("TechStackStep: Changeset: #{inspect(changeset)}")
               {:noreply,
                socket
                |> put_flash(
@@ -51,8 +72,15 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.TechStackStep do
                )}
           end
 
-        {:error, _changeset} ->
-          {:noreply, put_flash(socket, :error, "Failed to save tech stack configuration")}
+        {:error, changeset} ->
+          Logger.error("TechStackStep: Failed to save tech stack config: #{inspect(changeset.errors)}")
+          Logger.error("TechStackStep: Changeset: #{inspect(changeset)}")
+          {:noreply,
+           socket
+           |> put_flash(
+             :error,
+             "Failed to save tech stack configuration: #{inspect(changeset.errors)}"
+           )}
       end
     end
   end

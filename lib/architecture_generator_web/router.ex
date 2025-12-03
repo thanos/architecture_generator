@@ -41,6 +41,8 @@ defmodule ArchitectureGeneratorWeb.Router do
     live "/projects/:id", ProjectLive.Show
     live "/uploads", UploadLive.Index, :index
     live "/uploads/:id", UploadLive.Show, :show
+    live "/artifacts", ArtifactLive.Index, :index
+    live "/artifacts/:id", ArtifactLive.Show, :show
   end
 
   # Oban Web Interface for monitoring background jobs
