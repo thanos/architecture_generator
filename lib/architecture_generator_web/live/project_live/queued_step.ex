@@ -26,7 +26,7 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.QueuedStep do
           Our AI is analyzing your requirements and crafting a comprehensive architectural plan.
           This typically takes 10-20 minutes.
         </p>
-        
+
     <!-- Progress Info -->
         <div class="bg-gradient-to-r from-violet-50 to-blue-50 rounded-lg p-6 max-w-md mx-auto">
           <div class="flex items-center justify-between mb-4">
@@ -52,7 +52,7 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.QueuedStep do
           <span class="font-medium text-slate-700">{@project.user_email}</span>
           {" "} when your plan is ready.
         </p>
-        
+
     <!-- Auto-refresh notice -->
         <div class="mt-8 flex items-center justify-center gap-2 text-sm text-slate-500">
           <.icon name="hero-arrow-path" class="w-4 h-4 animate-spin" />
