@@ -22,12 +22,20 @@
           </div>
           <span class="text-lg font-semibold text-gray-900">ArchitectureGen</span>
         </div>
-        <.link
-          navigate={~p"/projects/new"}
-          class="px-5 py-2 bg-[#003168] hover:bg-[#004080] text-white text-sm font-medium rounded transition-colors duration-200"
-        >
-          Get Started
-        </.link>
+        <div class="flex items-center gap-4">
+          <.link
+            navigate={~p"/projects"}
+            class="px-5 py-2 text-gray-700 hover:text-gray-900 text-sm font-medium transition-colors duration-200"
+          >
+            All Projects
+          </.link>
+          <.link
+            navigate={~p"/projects/new"}
+            class="px-5 py-2 bg-[#003168] hover:bg-[#004080] text-white text-sm font-medium rounded transition-colors duration-200"
+          >
+            Get Started
+          </.link>
+        </div>
       </div>
     </div>
   </nav>

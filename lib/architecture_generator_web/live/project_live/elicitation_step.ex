@@ -37,6 +37,20 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.ElicitationStep do
   end
 
   @impl true
+  def handle_event("go_back", _params, socket) do
+    project = socket.assigns.project
+
+    case Projects.go_back_to_status(project, "Initial") do
+      {:ok, _updated_project} ->
+        send(self(), {:refresh_project, project.id})
+        {:noreply, socket}
+
+      {:error, _reason} ->
+        {:noreply, put_flash(socket, :error, "Failed to go back to previous step")}
+    end
+  end
+
+  @impl true
   def render(assigns) do
     ~H"""
     <div class="bg-white/80 backdrop-blur-sm rounded-xl border border-violet-200 shadow-lg p-8">
@@ -110,7 +124,17 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.ElicitationStep do
           <% end %>
         </div>
 
-        <div class="flex items-center justify-end gap-4 mt-8">
+        <div class="flex items-center justify-between gap-4 mt-8">
+          <button
+            type="button"
+            phx-click="go_back"
+            phx-target={@myself}
+            class="px-6 py-3 bg-slate-200 text-slate-700 rounded-xl font-semibold hover:bg-slate-300 transition-all duration-300 flex items-center gap-2"
+          >
+            <.icon name="hero-arrow-left" class="w-5 h-5" />
+            Back to Upload BRD
+          </button>
+
           <button
             type="submit"
             disabled={map_size(@answers) < length(@questions)}
