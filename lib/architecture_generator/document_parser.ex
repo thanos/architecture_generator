@@ -20,7 +20,7 @@ defmodule ArchitectureGenerator.DocumentParser do
 
       iex> parse_file("/path/to/document.pdf")
       {:ok, "Extracted text content..."}
-      
+
       iex> parse_file("/path/to/invalid.xyz")
       {:error, :unsupported_format}
   """
@@ -119,38 +119,54 @@ defmodule ArchitectureGenerator.DocumentParser do
   @doc """
   Parses a .doc file (legacy Word format).
 
-  Legacy .doc files use a proprietary binary format. We'll attempt
-  to extract readable text, but this is best-effort.
+  WARNING: Legacy .doc files use a proprietary binary format. This parser
+  performs basic text extraction and has significant limitations:
+  - May not work for all .doc files
+  - Only extracts printable ASCII characters
+  - Complex formatting, tables, and embedded objects are lost
+  - File size is limited to 10MB for safety
+
+  For production use, consider converting .doc to .docx first or using
+  an external library like LibreOffice/Antiword.
   """
   def parse_doc(file_path) do
     Logger.info("Parsing DOC file (legacy format): #{file_path}")
+    Logger.warning("Legacy .doc parsing has significant limitations. Consider converting to .docx")
 
-    # For legacy .doc files, we'll try basic text extraction
-    # Note: This is a simplified approach and may not work for all .doc files
-    case File.read(file_path) do
-      {:ok, binary_content} ->
-        # Try to extract ASCII/UTF-8 text from binary
-        text =
-          binary_content
-          |> :binary.bin_to_list()
-          |> Enum.filter(&(&1 >= 32 && &1 < 127))
-          |> List.to_string()
-          |> clean_text()
+    # Safety check: limit file size to 10MB
+    max_size = 10 * 1024 * 1024
 
-        if String.length(text) > 50 do
-          {:ok, text}
-        else
-          {:error, :doc_insufficient_text_extracted}
-        end
+    with {:ok, %{size: size}} <- File.stat(file_path),
+         :ok <- validate_file_size(size, max_size),
+         {:ok, binary_content} <- File.read(file_path) do
+      # Try to extract printable ASCII text from binary
+      # This is a very basic approach that works for simple .doc files
+      text =
+        binary_content
+        |> :binary.bin_to_list()
+        |> Enum.filter(&(&1 >= 32 && &1 < 127))
+        |> List.to_string()
+        |> clean_text()
 
-      {:error, reason} ->
-        {:error, {:doc_read_error, reason}}
+      if String.length(text) > 50 do
+        {:ok, text}
+      else
+        {:error, :doc_insufficient_text_extracted}
+      end
+    else
+      {:error, reason} -> {:error, reason}
     end
   rescue
     error ->
       Logger.error("Exception parsing DOC: #{inspect(error)}")
       {:error, {:doc_exception, error}}
   end
+
+  defp validate_file_size(size, max_size) when size > max_size do
+    {:error, {:file_too_large, "File size #{size} bytes exceeds maximum #{max_size} bytes"}}
+  end
+
+  defp validate_file_size(_size, _max_size), do: :ok
 
   @doc """
   Parses a Markdown file.
@@ -187,10 +203,13 @@ defmodule ArchitectureGenerator.DocumentParser do
   defp clean_text(text) when is_binary(text) do
     text
     |> String.trim()
-    # Replace multiple spaces with single space
-    |> String.replace(~r/\s+/, " ")
-    # Replace multiple newlines with double newline
+    # First, normalize line endings to \n
+    |> String.replace(~r/\r\n/, "\n")
+    |> String.replace(~r/\r/, "\n")
+    # Replace multiple newlines (3+) with double newline to preserve paragraphs
     |> String.replace(~r/\n{3,}/, "\n\n")
+    # Replace multiple horizontal whitespace (spaces/tabs, but NOT newlines) with single space
+    |> String.replace(~r/[^\S\n]+/, " ")
   end
 
   defp clean_text(_), do: ""
