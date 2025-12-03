@@ -4,6 +4,7 @@ defmodule ArchitectureGenerator.Projects do
   """
 
   import Ecto.Query, warn: false
+  import Ecto.Changeset
   alias ArchitectureGenerator.Repo
   alias ArchitectureGenerator.Projects.Project
 
@@ -121,5 +122,36 @@ defmodule ArchitectureGenerator.Projects do
     project
     |> Project.update_brd_changeset(attrs)
     |> Repo.update()
+  end
+
+  @doc """
+  Goes back to a previous step in the wizard.
+  Allows users to navigate backwards through the wizard steps.
+  """
+  def go_back_to_status(project, target_status) do
+    # Validate that we're going backwards (not forwards)
+    current_step = status_to_step(project.status)
+    target_step = status_to_step(target_status)
+
+    if target_step < current_step do
+      project
+      |> change()
+      |> put_change(:status, target_status)
+      |> Repo.update()
+    else
+      {:error, :invalid_backward_transition}
+    end
+  end
+
+  defp status_to_step(status) do
+    case status do
+      "Initial" -> 1
+      "Elicitation" -> 2
+      "Tech_Stack_Input" -> 3
+      "Queued" -> 4
+      "Complete" -> 5
+      "Error" -> 5
+      _ -> 0
+    end
   end
 end
