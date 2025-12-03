@@ -4,38 +4,105 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.InitialStep do
   alias ArchitectureGenerator.{Projects, Uploads}
 
   def update(assigns, socket) do
-    {:ok,
-     socket
-     |> assign(:project, assigns.project)
-     |> assign(:id, assigns.id)
-     |> assign(:brd_text, assigns.project.brd_content || "")
-     |> assign(:parsing_status, nil)
-     |> assign(:parsed_content_preview, nil)
-     |> assign(:processing_mode, assigns.project.processing_mode || "parse_only")
-     |> assign(:llm_provider, assigns.project.llm_provider || "openai")
-     |> allow_upload(:brd_file,
-       accept: ~w(.txt .md .pdf .doc .docx),
-       max_entries: 1,
-       max_file_size: 10_000_000,
-       auto_upload: true
-     )}
+    # Handle full updates (when project is provided) and partial updates (when only specific fields are updated)
+    socket =
+      if Map.has_key?(assigns, :project) do
+        # Full update - project data is provided
+        # Always reload project from database to get the latest saved values
+        # This ensures that any values saved by validate_form are loaded
+        project = Projects.get_project!(assigns.project.id)
+
+        socket
+        |> assign(:project, project)
+        |> assign(:id, assigns.id)
+        |> assign(:brd_text, project.brd_content || "")
+        |> assign(:processing_mode, project.processing_mode || "parse_only")
+        |> assign(:llm_provider, project.llm_provider || "openai")
+        |> assign(:parsing_status, nil)
+        |> assign(:parsed_content_preview, nil)
+        |> allow_upload(:brd_file,
+          accept: ~w(.txt .md .pdf .doc .docx),
+          max_entries: 1,
+          max_file_size: 10_000_000,
+          auto_upload: true
+        )
+      else
+        # Partial update - preserve existing state, only update id if provided
+        socket
+        |> then(fn s ->
+          if Map.has_key?(assigns, :id), do: assign(s, :id, assigns.id), else: s
+        end)
+      end
+      |> then(fn s ->
+        # Handle parsing_status updates
+        if Map.has_key?(assigns, :parsing_status) do
+          assign(s, :parsing_status, assigns.parsing_status)
+        else
+          # Ensure parsing_status is always initialized
+          assign_new(s, :parsing_status, fn -> nil end)
+        end
+      end)
+      |> then(fn s ->
+        # Handle parsed_content_preview updates
+        if Map.has_key?(assigns, :parsed_content_preview) do
+          assign(s, :parsed_content_preview, assigns.parsed_content_preview)
+        else
+          # Ensure parsed_content_preview is always initialized
+          assign_new(s, :parsed_content_preview, fn -> nil end)
+        end
+      end)
+
+    {:ok, socket}
   end
 
-  def handle_event("validate_brd", %{"brd_text" => brd_text}, socket) do
-    {:noreply, assign(socket, :brd_text, brd_text)}
-  end
+  def handle_event("validate_form", params, socket) do
+    # Save ALL form values together whenever ANY field changes
+    # This ensures all settings persist regardless of which field was changed
+    project = socket.assigns.project
 
-  def handle_event("validate_processing_mode", params, socket) do
-    processing_mode = Map.get(params, "processing_mode", "parse_only")
-    llm_provider = Map.get(params, "llm_provider", "openai")
+    # Get values from params or fall back to socket assigns
+    brd_text = Map.get(params, "brd_text", socket.assigns.brd_text || "")
+    processing_mode = Map.get(params, "processing_mode", socket.assigns.processing_mode || "parse_only")
+    llm_provider = Map.get(params, "llm_provider", socket.assigns.llm_provider || "openai")
+
+    # Save all values together to database
+    Projects.save_draft_brd_inputs(project, %{
+      brd_content: brd_text,
+      processing_mode: processing_mode,
+      llm_provider: llm_provider
+    })
 
     {:noreply,
      socket
+     |> assign(:brd_text, brd_text)
      |> assign(:processing_mode, processing_mode)
      |> assign(:llm_provider, llm_provider)}
   end
 
+  # Keep the old handler names for backward compatibility, but route to validate_form
+  def handle_event("validate_brd", params, socket) do
+    handle_event("validate_form", params, socket)
+  end
+
+  def handle_event("validate_processing_mode", params, socket) do
+    handle_event("validate_form", params, socket)
+  end
+
   def handle_event("validate_upload", _params, socket) do
+    # Save ALL form values when a file is selected/uploaded
+    # to ensure they persist even if the component gets re-rendered
+    project = socket.assigns.project
+    brd_text = socket.assigns.brd_text || ""
+    processing_mode = socket.assigns.processing_mode || "parse_only"
+    llm_provider = socket.assigns.llm_provider || "openai"
+
+    # Save all values together
+    Projects.save_draft_brd_inputs(project, %{
+      brd_content: brd_text,
+      processing_mode: processing_mode,
+      llm_provider: llm_provider
+    })
+
     {:noreply, socket}
   end
 
@@ -53,6 +120,16 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.InitialStep do
       consume_uploaded_entries(socket, :brd_file, fn %{path: path}, entry ->
         # Set parsing status
         send(self(), {:update_parsing_status, "Processing #{entry.client_name}..."})
+
+        # Ensure processing_mode and llm_provider are saved before processing the file
+        # This ensures they persist even if the component gets re-rendered
+        Projects.save_draft_brd_inputs(project, %{
+          processing_mode: processing_mode,
+          llm_provider: llm_provider
+        })
+
+        # Reload project to get the latest values
+        project = Projects.get_project!(project.id)
 
         # Create upload record and store file in S3
         case Uploads.create_upload(
@@ -130,13 +207,6 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.InitialStep do
     end
   end
 
-  def handle_info({:update_parsing_status, status}, socket) do
-    {:noreply, assign(socket, :parsing_status, status)}
-  end
-
-  def handle_info({:show_content_preview, preview}, socket) do
-    {:noreply, assign(socket, :parsed_content_preview, preview)}
-  end
 
   def render(assigns) do
     ~H"""
@@ -150,7 +220,7 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.InitialStep do
         Our AI will analyze it to generate a comprehensive architectural plan.
       </p>
 
-      <form phx-change="validate_brd" phx-submit="submit_brd" phx-target={@myself} id="brd-form">
+      <form phx-change="validate_form" phx-submit="submit_brd" phx-target={@myself} id="brd-form">
         <!-- BRD Text Area -->
         <div class="mb-6">
           <label for="brd-text" class="block text-sm font-medium text-slate-700 mb-2">
@@ -174,14 +244,14 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.InitialStep do
             Minimum 100 characters recommended for meaningful analysis
           </p>
         </div>
-        
+
     <!-- Processing Mode Selection -->
         <div class="mb-6 bg-gradient-to-r from-violet-50 to-blue-50 rounded-lg p-6">
           <h3 class="text-lg font-bold text-slate-900 mb-4">
             🤖 AI Processing Options
           </h3>
 
-          <div class="space-y-4" phx-change="validate_processing_mode" phx-target={@myself}>
+          <div class="space-y-4" phx-change="validate_form" phx-target={@myself}>
             <!-- Parse Only -->
             <label class="flex items-start gap-3 cursor-pointer">
               <input
@@ -198,7 +268,7 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.InitialStep do
                 </p>
               </div>
             </label>
-            
+
     <!-- LLM Parsed -->
             <label class="flex items-start gap-3 cursor-pointer">
               <input
@@ -215,7 +285,7 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.InitialStep do
                 </p>
               </div>
             </label>
-            
+
     <!-- LLM Raw -->
             <label class="flex items-start gap-3 cursor-pointer">
               <input
@@ -232,7 +302,7 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.InitialStep do
                 </p>
               </div>
             </label>
-            
+
     <!-- LLM Provider Selection (only show if AI mode selected) -->
             <%= if @processing_mode in ["llm_parsed", "llm_raw"] do %>
               <div class="mt-4 pl-7">
@@ -255,7 +325,7 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.InitialStep do
             <% end %>
           </div>
         </div>
-        
+
     <!-- File Upload Section -->
         <div class="mb-6">
           <label class="block text-sm font-medium text-slate-700 mb-2">
@@ -285,7 +355,7 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.InitialStep do
 
             <.live_file_input upload={@uploads.brd_file} class="hidden" />
           </div>
-          
+
     <!-- Upload Progress & Preview -->
           <%= for entry <- @uploads.brd_file.entries do %>
             <div class="mt-4 p-4 bg-violet-50 border border-violet-200 rounded-lg">
@@ -305,7 +375,7 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.InitialStep do
                   <.icon name="hero-x-mark" class="w-5 h-5" />
                 </button>
               </div>
-              
+
     <!-- Progress Bar -->
               <div class="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
                 <div
@@ -315,7 +385,7 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.InitialStep do
                 </div>
               </div>
               <p class="text-xs text-slate-600 mt-1">{entry.progress}% uploaded</p>
-              
+
     <!-- Upload Errors -->
               <%= for err <- upload_errors(@uploads.brd_file, entry) do %>
                 <p class="text-xs text-red-600 mt-2 flex items-center gap-1">
@@ -325,7 +395,7 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.InitialStep do
               <% end %>
             </div>
           <% end %>
-          
+
     <!-- Parsing Status -->
           <%= if @parsing_status do %>
             <div class="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -335,7 +405,7 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.InitialStep do
               </div>
             </div>
           <% end %>
-          
+
     <!-- Parsed Content Preview -->
           <%= if @parsed_content_preview do %>
             <div class="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
@@ -347,7 +417,7 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.InitialStep do
               </p>
             </div>
           <% end %>
-          
+
     <!-- General Upload Errors -->
           <%= for err <- upload_errors(@uploads.brd_file) do %>
             <p class="text-sm text-red-600 mt-2 flex items-center gap-1">
@@ -356,7 +426,7 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.InitialStep do
             </p>
           <% end %>
         </div>
-        
+
     <!-- Submit Button -->
         <div class="flex items-center justify-end gap-4">
           <button

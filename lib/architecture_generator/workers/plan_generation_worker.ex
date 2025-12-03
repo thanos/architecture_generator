@@ -1,4 +1,5 @@
 defmodule ArchitectureGenerator.Workers.PlanGenerationWorker do
+
   @moduledoc """
   Oban worker that processes queued projects and generates architectural plans using LLM.
 
@@ -10,6 +11,7 @@ defmodule ArchitectureGenerator.Workers.PlanGenerationWorker do
   5. Updates the project status to "Complete"
   6. Sends notification email (future enhancement)
   """
+
   use Oban.Worker, queue: :default, max_attempts: 3
 
   alias ArchitectureGenerator.{Projects, Plans, LLMService}
@@ -30,6 +32,7 @@ defmodule ArchitectureGenerator.Workers.PlanGenerationWorker do
     try do
       plan_content = generate_plan_with_llm(project)
 
+
       {:ok, architectural_plan} =
         Plans.create_architectural_plan(%{
           content: plan_content,
@@ -39,19 +42,17 @@ defmodule ArchitectureGenerator.Workers.PlanGenerationWorker do
       {:ok, _project} = Projects.complete_project(project, architectural_plan.id)
 
       Logger.info("Successfully generated LLM-based plan for project #{project_id}")
-
-      {:ok, %{architectural_plan_id: architectural_plan.id}}
+      :ok
     rescue
       error ->
         Logger.error("Failed to generate plan for project #{project_id}: #{inspect(error)}")
-
         Projects.mark_project_error(project)
-
         {:error, error}
     end
   end
 
   defp generate_plan_with_llm(project) do
+
     context = """
     You are a senior software architect with extensive experience designing scalable,
     secure, and maintainable software systems.
@@ -143,17 +144,21 @@ defmodule ArchitectureGenerator.Workers.PlanGenerationWorker do
     """
 
     case LLMService.enhance_parsed_text(context, provider: :openai) do
+
       {:ok, plan_content} ->
         plan_content
 
       {:error, reason} ->
         Logger.warning(
+
           "LLM generation failed for project #{project.id}, using fallback: #{inspect(reason)}"
+
         )
 
         generate_fallback_plan(project)
     end
   end
+
 
   defp generate_fallback_plan(project) do
     """
@@ -164,8 +169,8 @@ defmodule ArchitectureGenerator.Workers.PlanGenerationWorker do
 
     ## Executive Summary
 
-    This architectural plan provides a foundation for implementing #{project.name}. 
-    Due to temporary LLM unavailability, this plan uses a standard template. 
+    This architectural plan provides a foundation for implementing #{project.name}.
+    Due to temporary LLM unavailability, this plan uses a standard template.
     Please review and enhance with project-specific details.
 
     ## Business Requirements Summary
@@ -180,15 +185,18 @@ defmodule ArchitectureGenerator.Workers.PlanGenerationWorker do
     ## Recommended Architecture
 
     ### High-Level Architecture
-    Based on the requirements and technology choices, we recommend a standard web application 
+    Based on the requirements and technology choices, we recommend a standard web application
     architecture with the following components:
 
     1. **Frontend Layer**
+
        - Technology: #{Map.get(project.tech_stack_config, "web_framework", "Modern Web Framework")}
+
        - Deployment: CDN with edge caching
        - State Management: Context-based or global state
 
     2. **API Gateway**
+
        - Technology: #{Map.get(project.tech_stack_config, "primary_language", "Selected Language")} with framework
        - Authentication: JWT-based or session-based auth
        - Rate Limiting: Token bucket algorithm
@@ -266,12 +274,14 @@ defmodule ArchitectureGenerator.Workers.PlanGenerationWorker do
 
   defp format_scalability_recommendations(elicitation_data) do
     concurrent_users =
+
       Map.get(elicitation_data, "expected_users", "unknown")
 
     data_volume = Map.get(elicitation_data, "data_volume", "unknown")
 
+
     """
-    - **Expected Load**: #{concurrent_users} concurrent users
+    - **Expected Load**: #{concurrent_users}
     - **Data Volume**: #{data_volume}
     - **Scaling Strategy**: Horizontal scaling with auto-scaling groups
     - **Load Balancing**: Application Load Balancer with health checks
@@ -281,7 +291,9 @@ defmodule ArchitectureGenerator.Workers.PlanGenerationWorker do
 
   defp format_security_recommendations(elicitation_data) do
     security_reqs =
+
       Map.get(elicitation_data, "security_compliance", "standard")
+
 
     """
     - **Security Requirements**: #{security_reqs}
@@ -294,8 +306,8 @@ defmodule ArchitectureGenerator.Workers.PlanGenerationWorker do
 
   defp format_integration_recommendations(elicitation_data) do
     integrations =
-      Map.get(elicitation_data, "integration_requirements", "none")
 
+      Map.get(elicitation_data, "integration_requirements", "none")
     """
     - **Required Integrations**: #{integrations}
     - **Integration Pattern**: API Gateway + Service Mesh
@@ -303,4 +315,12 @@ defmodule ArchitectureGenerator.Workers.PlanGenerationWorker do
     - **Monitoring**: Centralized logging and distributed tracing
     """
   end
+
+  defp extract_elicitation_value(data, key_variants) when is_map(data) do
+    Enum.find_value(key_variants, "not specified", fn key ->
+      Map.get(data, key)
+    end)
+  end
+
+  defp extract_elicitation_value(_, _), do: "not specified"
 end

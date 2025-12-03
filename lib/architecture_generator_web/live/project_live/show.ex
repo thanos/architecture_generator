@@ -28,7 +28,30 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.Show do
   @impl true
   def handle_info({:refresh_project, project_id}, socket) do
     project = Projects.get_project!(project_id)
+    # Update the project, which will trigger InitialStep component update
+    # The InitialStep component will preserve existing processing_mode and llm_provider
+    # if they're set in socket assigns, otherwise it will use the project values
     {:noreply, assign(socket, :project, project)}
+  end
+
+  @impl true
+  def handle_info({:update_parsing_status, status}, socket) do
+    # Forward parsing status updates to the InitialStep component
+    send_update(ArchitectureGeneratorWeb.ProjectLive.InitialStep,
+      id: "initial-step",
+      parsing_status: status
+    )
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info({:show_content_preview, preview}, socket) do
+    # Forward content preview to the InitialStep component
+    send_update(ArchitectureGeneratorWeb.ProjectLive.InitialStep,
+      id: "initial-step",
+      parsed_content_preview: preview
+    )
+    {:noreply, socket}
   end
 
   @impl true
@@ -45,10 +68,10 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.Show do
               <span class="text-sm text-slate-600">{@project.user_email}</span>
             </div>
           </div>
-          
+
     <!-- Progress Steps -->
           <.progress_steps current_status={@project.status} />
-          
+
     <!-- Step Content -->
           <div class="mt-8">
             <%= case @project.status do %>

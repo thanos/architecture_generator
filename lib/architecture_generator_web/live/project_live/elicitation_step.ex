@@ -16,9 +16,25 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.ElicitationStep do
   end
 
   @impl true
-  def handle_event("validate_answer", %{"question_id" => question_id, "answer" => answer}, socket) do
-    answers = Map.put(socket.assigns.answers, question_id, answer)
-    {:noreply, assign(socket, :answers, answers)}
+  def handle_event("validate_answer", params, socket) do
+    # Extract question_id from params - input names are like "answer_expected_users"
+    # Find the key that starts with "answer_" (filter out Phoenix internal params like "_target")
+    {question_id, answer} =
+      params
+      |> Enum.reject(fn {key, _value} -> String.starts_with?(key, "_") end)
+      |> Enum.find(fn {key, _value} -> String.starts_with?(key, "answer_") end)
+      |> case do
+        nil -> {nil, ""}
+        {key, value} -> {String.replace_prefix(key, "answer_", ""), value}
+      end
+
+    if question_id do
+      answers = Map.put(socket.assigns.answers, question_id, answer)
+      {:noreply, assign(socket, :answers, answers)}
+    else
+      # If we can't determine question_id, just return without error
+      {:noreply, socket}
+    end
   end
 
   @impl true
@@ -33,6 +49,20 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.ElicitationStep do
 
       {:error, _changeset} ->
         {:noreply, put_flash(socket, :error, "Failed to save elicitation data")}
+    end
+  end
+
+  @impl true
+  def handle_event("go_back", _params, socket) do
+    project = socket.assigns.project
+
+    case Projects.go_back_to_status(project, "Initial") do
+      {:ok, _updated_project} ->
+        send(self(), {:refresh_project, project.id})
+        {:noreply, socket}
+
+      {:error, _reason} ->
+        {:noreply, put_flash(socket, :error, "Failed to go back to previous step")}
     end
   end
 
@@ -64,10 +94,9 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.ElicitationStep do
                 <input
                   type="text"
                   id={"question-#{question.id}"}
-                  name="answer"
+                  name={"answer_#{question.id}"}
                   value={Map.get(@answers, question.id, "")}
                   phx-change="validate_answer"
-                  phx-value-question_id={question.id}
                   phx-target={@myself}
                   class="w-full px-4 py-3 rounded-lg bg-white text-slate-900 placeholder:text-slate-400 border-2 border-slate-200 focus:border-violet-400 focus:ring focus:ring-violet-200 focus:ring-opacity-50 transition-colors"
                   placeholder={question.placeholder}
@@ -77,10 +106,9 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.ElicitationStep do
               <%= if question.type == :textarea do %>
                 <textarea
                   id={"question-#{question.id}"}
-                  name="answer"
+                  name={"answer_#{question.id}"}
                   rows="3"
                   phx-change="validate_answer"
-                  phx-value-question_id={question.id}
                   phx-target={@myself}
                   class="w-full px-4 py-3 rounded-lg bg-white text-slate-900 placeholder:text-slate-400 border-2 border-slate-200 focus:border-violet-400 focus:ring focus:ring-violet-200 focus:ring-opacity-50 transition-colors"
                   placeholder={question.placeholder}
@@ -90,9 +118,8 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.ElicitationStep do
               <%= if question.type == :select do %>
                 <select
                   id={"question-#{question.id}"}
-                  name="answer"
+                  name={"answer_#{question.id}"}
                   phx-change="validate_answer"
-                  phx-value-question_id={question.id}
                   phx-target={@myself}
                   class="w-full px-4 py-3 rounded-lg bg-white text-slate-900 border-2 border-slate-200 focus:border-violet-400 focus:ring focus:ring-violet-200 focus:ring-opacity-50 transition-colors"
                 >
@@ -110,7 +137,17 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.ElicitationStep do
           <% end %>
         </div>
 
-        <div class="flex items-center justify-end gap-4 mt-8">
+        <div class="flex items-center justify-between gap-4 mt-8">
+          <button
+            type="button"
+            phx-click="go_back"
+            phx-target={@myself}
+            class="px-6 py-3 bg-slate-200 text-slate-700 rounded-xl font-semibold hover:bg-slate-300 transition-all duration-300 flex items-center gap-2"
+          >
+            <.icon name="hero-arrow-left" class="w-5 h-5" />
+            Back to Upload BRD
+          </button>
+
           <button
             type="submit"
             disabled={map_size(@answers) < length(@questions)}

@@ -9,6 +9,7 @@ defmodule ArchitectureGenerator.Uploads.Upload do
     field :s3_key, :string
     field :s3_bucket, :string
     field :current_version, :integer, default: 1
+    field :uploaded_by, :string
 
     belongs_to :project, ArchitectureGenerator.Projects.Project
     has_many :versions, ArchitectureGenerator.Uploads.UploadVersion
@@ -21,7 +22,7 @@ defmodule ArchitectureGenerator.Uploads.Upload do
   """
   def create_changeset(upload, attrs) do
     upload
-    |> cast(attrs, [:filename, :content_type, :size_bytes, :s3_key, :s3_bucket, :project_id])
+    |> cast(attrs, [:filename, :content_type, :size_bytes, :s3_key, :s3_bucket, :project_id, :uploaded_by])
     |> validate_required([:filename, :s3_key, :s3_bucket])
     |> validate_length(:filename, min: 1, max: 255)
     |> unique_constraint([:s3_key, :s3_bucket])

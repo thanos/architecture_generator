@@ -1,74 +1,74 @@
-<div class="min-h-screen bg-gradient-to-br from-violet-50 via-blue-50 to-cyan-50">
-  <!-- Hero Section -->
-  <div class="relative overflow-hidden">
-    <!-- Gradient Orbs Background -->
-    <div class="absolute top-0 left-1/4 w-96 h-96 bg-violet-300/30 rounded-full blur-3xl"></div>
-    <div class="absolute top-20 right-1/4 w-80 h-80 bg-cyan-300/30 rounded-full blur-3xl"></div>
-
-    <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-32">
-      <!-- Navigation -->
-      <nav class="flex items-center justify-between mb-20">
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 bg-gradient-to-br from-violet-500 to-cyan-500 rounded-xl flex items-center justify-center">
-            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<div class="min-h-screen bg-white">
+  <!-- Navigation -->
+  <nav class="border-b border-gray-200 bg-white">
+    <div class="container mx-auto px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 bg-[#003168] rounded flex items-center justify-center">
+            <svg
+              class="w-5 h-5 text-[#FFD500]"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"
                 stroke-width="2"
-                d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+                d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"
               >
               </path>
             </svg>
           </div>
-          <span class="text-2xl font-bold bg-gradient-to-r from-violet-600 to-cyan-600 bg-clip-text text-transparent">
-            ArchitectureGen
-          </span>
+          <span class="text-lg font-semibold text-gray-900">ArchitectureGen</span>
         </div>
         <div class="flex items-center gap-4">
-          <a
-            href="#features"
-            class="text-slate-600 hover:text-slate-900 font-medium transition-colors"
+          <.link
+            navigate={~p"/projects"}
+            class="px-5 py-2 text-gray-700 hover:text-gray-900 text-sm font-medium transition-colors duration-200"
           >
-            Features
-          </a>
-          <a
-            href="#how-it-works"
-            class="text-slate-600 hover:text-slate-900 font-medium transition-colors"
+            All Projects
+          </.link>
+          <.link
+            navigate={~p"/projects/new"}
+            class="px-5 py-2 bg-[#003168] hover:bg-[#004080] text-white text-sm font-medium rounded transition-colors duration-200"
           >
-            How It Works
-          </a>
-          <button class="px-6 py-2.5 bg-gradient-to-r from-violet-600 to-cyan-600 text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-violet-500/50 transition-all duration-300">
             Get Started
-          </button>
+          </.link>
         </div>
-      </nav>
-      
-<!-- Hero Content -->
-      <div class="text-center max-w-4xl mx-auto">
-        <div class="inline-flex items-center gap-2 px-4 py-2 bg-white/60 backdrop-blur-sm rounded-full border border-violet-200 mb-8">
-          <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
-          <span class="text-sm font-medium text-slate-700">
-            Transform BRDs into Architectural Plans with AI
+      </div>
+    </div>
+  </nav>
+  
+<!-- Hero Section -->
+  <div class="border-b border-gray-100">
+    <div class="container mx-auto px-6 lg:px-8 py-20 lg:py-28">
+      <div class="max-w-4xl">
+        <div class="inline-block mb-6 px-3 py-1 bg-gray-100 rounded-full">
+          <span class="text-[#003168] font-medium text-xs tracking-wide uppercase">
+            AI-Powered Architecture
           </span>
         </div>
 
-        <h1 class="text-6xl font-bold text-slate-900 mb-6 leading-tight">
-          From Business Requirements to
-          <span class="bg-gradient-to-r from-violet-600 to-cyan-600 bg-clip-text text-transparent">
-            Complete Architecture
+        <h1 class="text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight tracking-tight">
+          Transform Your BRD Into
+          <span class="block text-[#003168] mt-2">
+            Production-Ready Architecture
           </span>
         </h1>
 
-        <p class="text-xl text-slate-600 mb-12 max-w-2xl mx-auto leading-relaxed">
-          Upload your Business Requirement Document and let our AI-powered platform generate a comprehensive,
-          industry-standard IT Architectural Plan in minutes.
+        <p class="text-xl text-gray-600 mb-10 leading-relaxed max-w-3xl">
+          Upload your Business Requirements Document and receive comprehensive architectural plans in minutes. Powered by GPT-4o-mini for enterprise-grade analysis.
         </p>
 
-        <div class="flex items-center justify-center gap-4">
-          <button class="px-8 py-4 bg-gradient-to-r from-violet-600 to-cyan-600 text-white rounded-xl font-semibold text-lg hover:shadow-2xl hover:shadow-violet-500/50 transition-all duration-300 transform hover:-translate-y-0.5">
-            Create Your First Plan
+        <div class="flex flex-col sm:flex-row gap-4 items-start">
+          <.link
+            navigate={~p"/projects/new"}
+            class="inline-flex items-center px-8 py-4 bg-[#003168] hover:bg-[#004080] text-white font-semibold rounded transition-all duration-200"
+          >
+            Start Building
             <svg
-              class="inline-block ml-2 w-5 h-5"
+              class="w-5 h-5 ml-2"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -81,25 +81,49 @@
               >
               </path>
             </svg>
-          </button>
-          <button class="px-8 py-4 bg-white/80 backdrop-blur-sm text-slate-700 rounded-xl font-semibold text-lg border-2 border-slate-200 hover:border-violet-300 transition-all duration-300">
-            Watch Demo
+          </.link>
+
+          <button class="inline-flex items-center px-8 py-4 bg-white hover:bg-gray-50 text-gray-900 font-semibold border-2 border-gray-200 rounded transition-all duration-200">
+            View Demo
+            <svg
+              class="w-5 h-5 ml-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
+              >
+              </path>
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              >
+              </path>
+            </svg>
           </button>
         </div>
         
-<!-- Stats -->
-        <div class="grid grid-cols-3 gap-8 mt-20 max-w-3xl mx-auto">
-          <div class="text-center">
-            <div class="text-4xl font-bold text-slate-900 mb-2">20 min</div>
-            <div class="text-sm text-slate-600">Average Generation Time</div>
-          </div>
-          <div class="text-center">
-            <div class="text-4xl font-bold text-slate-900 mb-2">500+</div>
-            <div class="text-sm text-slate-600">Plans Generated</div>
-          </div>
-          <div class="text-center">
-            <div class="text-4xl font-bold text-slate-900 mb-2">98%</div>
-            <div class="text-sm text-slate-600">Accuracy Rate</div>
+<!-- Stats Bar -->
+        <div class="mt-16 pt-8 border-t border-gray-200">
+          <div class="grid grid-cols-3 gap-8 max-w-2xl">
+            <div>
+              <div class="text-3xl font-bold text-[#003168] mb-1">95%</div>
+              <div class="text-sm text-gray-600">Time Saved</div>
+            </div>
+            <div>
+              <div class="text-3xl font-bold text-[#003168] mb-1">500+</div>
+              <div class="text-sm text-gray-600">Projects Generated</div>
+            </div>
+            <div>
+              <div class="text-3xl font-bold text-[#003168] mb-1">24/7</div>
+              <div class="text-sm text-gray-600">AI Assistance</div>
+            </div>
           </div>
         </div>
       </div>
@@ -107,20 +131,27 @@
   </div>
   
 <!-- Features Section -->
-  <div id="features" class="py-24 bg-white/50 backdrop-blur-sm">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="text-center mb-16">
-        <h2 class="text-4xl font-bold text-slate-900 mb-4">Why Choose ArchitectureGen?</h2>
-        <p class="text-xl text-slate-600">
-          Streamline your architectural planning process with intelligent automation
+  <div class="bg-gray-50 border-b border-gray-200 py-20 lg:py-28">
+    <div class="container mx-auto px-6 lg:px-8">
+      <div class="max-w-3xl mb-16">
+        <h2 class="text-4xl font-bold text-gray-900 mb-4">
+          Enterprise-Grade Features
+        </h2>
+        <p class="text-xl text-gray-600">
+          Built for teams who demand reliability, speed, and precision in their architecture planning.
         </p>
       </div>
 
-      <div class="grid md:grid-cols-3 gap-8">
+      <div class="grid lg:grid-cols-3 gap-8 max-w-6xl">
         <!-- Feature 1 -->
-        <div class="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-shadow border border-violet-100">
-          <div class="w-14 h-14 bg-gradient-to-br from-violet-500 to-violet-600 rounded-xl flex items-center justify-center mb-6">
-            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="bg-white border border-gray-200 rounded-lg p-8 hover:border-[#003168] transition-colors duration-200">
+          <div class="w-12 h-12 bg-[#003168] rounded-lg flex items-center justify-center mb-6">
+            <svg
+              class="w-6 h-6 text-[#FFD500]"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"
@@ -130,47 +161,57 @@
               </path>
             </svg>
           </div>
-          <h3 class="text-xl font-bold text-slate-900 mb-3">Lightning Fast</h3>
-          <p class="text-slate-600 leading-relaxed">
-            Generate comprehensive architectural plans in under 20 minutes. No more weeks of manual documentation.
+          <h3 class="text-xl font-bold text-gray-900 mb-3">Lightning Fast</h3>
+          <p class="text-gray-600 leading-relaxed">
+            Generate complete architectural plans in minutes. Our AI processes your requirements instantly and delivers production-ready documentation.
           </p>
         </div>
         
 <!-- Feature 2 -->
-        <div class="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-shadow border border-cyan-100">
-          <div class="w-14 h-14 bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-xl flex items-center justify-center mb-6">
-            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="bg-white border border-gray-200 rounded-lg p-8 hover:border-[#003168] transition-colors duration-200">
+          <div class="w-12 h-12 bg-[#003168] rounded-lg flex items-center justify-center mb-6">
+            <svg
+              class="w-6 h-6 text-[#FFD500]"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"
                 stroke-width="2"
-                d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
               >
               </path>
             </svg>
           </div>
-          <h3 class="text-xl font-bold text-slate-900 mb-3">Industry Standard</h3>
-          <p class="text-slate-600 leading-relaxed">
-            AI-generated plans follow best practices and industry-standard architectural frameworks.
+          <h3 class="text-xl font-bold text-gray-900 mb-3">AI-Powered Insights</h3>
+          <p class="text-gray-600 leading-relaxed">
+            Leverage GPT-4o-mini to analyze requirements, suggest best practices, and identify potential issues before they become problems.
           </p>
         </div>
         
 <!-- Feature 3 -->
-        <div class="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-shadow border border-violet-100">
-          <div class="w-14 h-14 bg-gradient-to-br from-violet-500 to-cyan-500 rounded-xl flex items-center justify-center mb-6">
-            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="bg-white border border-gray-200 rounded-lg p-8 hover:border-[#003168] transition-colors duration-200">
+          <div class="w-12 h-12 bg-[#003168] rounded-lg flex items-center justify-center mb-6">
+            <svg
+              class="w-6 h-6 text-[#FFD500]"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"
                 stroke-width="2"
-                d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
+                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
               >
               </path>
             </svg>
           </div>
-          <h3 class="text-xl font-bold text-slate-900 mb-3">Smart Elicitation</h3>
-          <p class="text-slate-600 leading-relaxed">
-            Intelligently identifies ambiguities in your BRD and asks clarifying questions before generation.
+          <h3 class="text-xl font-bold text-gray-900 mb-3">Enterprise Ready</h3>
+          <p class="text-gray-600 leading-relaxed">
+            Bank-level security, scalable infrastructure, and comprehensive documentation. Deploy to Fly.io with a single click.
           </p>
         </div>
       </div>
@@ -178,71 +219,125 @@
   </div>
   
 <!-- How It Works Section -->
-  <div id="how-it-works" class="py-24">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="text-center mb-16">
-        <h2 class="text-4xl font-bold text-slate-900 mb-4">How It Works</h2>
-        <p class="text-xl text-slate-600">Four simple steps to your architectural plan</p>
+  <div class="bg-white py-20 lg:py-28">
+    <div class="container mx-auto px-6 lg:px-8">
+      <div class="max-w-3xl mb-16">
+        <h2 class="text-4xl font-bold text-gray-900 mb-4">How It Works</h2>
+        <p class="text-xl text-gray-600">
+          From BRD to production-ready architecture in four simple steps.
+        </p>
       </div>
 
-      <div class="grid md:grid-cols-4 gap-6">
+      <div class="grid md:grid-cols-4 gap-8 max-w-5xl">
         <!-- Step 1 -->
-        <div class="text-center">
-          <div class="w-16 h-16 bg-gradient-to-br from-violet-500 to-violet-600 text-white rounded-2xl flex items-center justify-center text-2xl font-bold mx-auto mb-4">
-            1
+        <div class="relative">
+          <div class="flex items-center justify-center w-12 h-12 bg-[#003168] rounded-full mb-4">
+            <span class="text-xl font-bold text-white">1</span>
           </div>
-          <h4 class="font-bold text-slate-900 mb-2">Upload BRD</h4>
-          <p class="text-sm text-slate-600">
-            Upload or paste your business requirements document
+          <h3 class="text-lg font-bold text-gray-900 mb-2">Upload BRD</h3>
+          <p class="text-gray-600 text-sm leading-relaxed">
+            Drop your requirements document or paste text directly into the platform.
           </p>
+          <div class="hidden md:block absolute top-6 left-12 w-full h-0.5 bg-gray-200 -z-10">
+          </div>
         </div>
         
 <!-- Step 2 -->
-        <div class="text-center">
-          <div class="w-16 h-16 bg-gradient-to-br from-violet-500 to-cyan-500 text-white rounded-2xl flex items-center justify-center text-2xl font-bold mx-auto mb-4">
-            2
+        <div class="relative">
+          <div class="flex items-center justify-center w-12 h-12 bg-[#003168] rounded-full mb-4">
+            <span class="text-xl font-bold text-white">2</span>
           </div>
-          <h4 class="font-bold text-slate-900 mb-2">Answer Questions</h4>
-          <p class="text-sm text-slate-600">Clarify any ambiguities with guided questions</p>
+          <h3 class="text-lg font-bold text-gray-900 mb-2">AI Analysis</h3>
+          <p class="text-gray-600 text-sm leading-relaxed">
+            Answer guided questions about your project's requirements and constraints.
+          </p>
+          <div class="hidden md:block absolute top-6 left-12 w-full h-0.5 bg-gray-200 -z-10">
+          </div>
         </div>
         
 <!-- Step 3 -->
-        <div class="text-center">
-          <div class="w-16 h-16 bg-gradient-to-br from-cyan-500 to-cyan-600 text-white rounded-2xl flex items-center justify-center text-2xl font-bold mx-auto mb-4">
-            3
+        <div class="relative">
+          <div class="flex items-center justify-center w-12 h-12 bg-[#003168] rounded-full mb-4">
+            <span class="text-xl font-bold text-white">3</span>
           </div>
-          <h4 class="font-bold text-slate-900 mb-2">Choose Stack</h4>
-          <p class="text-sm text-slate-600">Select your preferred technology stack</p>
+          <h3 class="text-lg font-bold text-gray-900 mb-2">Choose Stack</h3>
+          <p class="text-gray-600 text-sm leading-relaxed">
+            Select your preferred technologies and deployment environment.
+          </p>
+          <div class="hidden md:block absolute top-6 left-12 w-full h-0.5 bg-gray-200 -z-10">
+          </div>
         </div>
         
 <!-- Step 4 -->
-        <div class="text-center">
-          <div class="w-16 h-16 bg-gradient-to-br from-cyan-500 to-violet-500 text-white rounded-2xl flex items-center justify-center text-2xl font-bold mx-auto mb-4">
-            4
+        <div>
+          <div class="flex items-center justify-center w-12 h-12 bg-[#FFD500] rounded-full mb-4">
+            <span class="text-xl font-bold text-[#003168]">4</span>
           </div>
-          <h4 class="font-bold text-slate-900 mb-2">Get Your Plan</h4>
-          <p class="text-sm text-slate-600">Receive a complete architectural plan via email</p>
+          <h3 class="text-lg font-bold text-gray-900 mb-2">Get Plan</h3>
+          <p class="text-gray-600 text-sm leading-relaxed">
+            Receive comprehensive architecture documentation instantly.
+          </p>
         </div>
       </div>
     </div>
   </div>
   
 <!-- CTA Section -->
-  <div class="relative py-24 overflow-hidden">
-    <div class="absolute inset-0 bg-gradient-to-r from-violet-600 to-cyan-600"></div>
-    <div class="absolute top-0 left-1/3 w-96 h-96 bg-white/10 rounded-full blur-3xl"></div>
-    <div class="absolute bottom-0 right-1/3 w-80 h-80 bg-white/10 rounded-full blur-3xl"></div>
-
-    <div class="relative max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
-      <h2 class="text-4xl font-bold text-white mb-6">
-        Ready to Transform Your Requirements?
-      </h2>
-      <p class="text-xl text-white/90 mb-8">
-        Join hundreds of teams who've accelerated their architectural planning with AI
-      </p>
-      <button class="px-10 py-4 bg-white text-violet-600 rounded-xl font-bold text-lg hover:shadow-2xl hover:shadow-white/50 transition-all duration-300 transform hover:-translate-y-0.5">
-        Start Building Now
-      </button>
+  <div class="bg-gray-900 py-20 lg:py-28">
+    <div class="container mx-auto px-6 lg:px-8">
+      <div class="max-w-4xl mx-auto text-center">
+        <h2 class="text-4xl lg:text-5xl font-bold text-white mb-6">
+          Ready to Transform Your Development Process?
+        </h2>
+        <p class="text-xl text-gray-400 mb-10 max-w-2xl mx-auto">
+          Join hundreds of teams already using AI to accelerate their architecture planning. Start your first project free today.
+        </p>
+        <.link
+          navigate={~p"/projects/new"}
+          class="inline-flex items-center px-10 py-4 bg-[#FFD500] hover:bg-[#FFE44D] text-[#003168] font-bold rounded transition-all duration-200"
+        >
+          Create Your First Project
+          <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M17 8l4 4m0 0l-4 4m4-4H3"
+            >
+            </path>
+          </svg>
+        </.link>
+      </div>
+    </div>
+  </div>
+  
+<!-- Footer -->
+  <div class="border-t border-gray-200 bg-white py-12">
+    <div class="container mx-auto px-6 lg:px-8">
+      <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 bg-[#003168] rounded flex items-center justify-center">
+            <svg
+              class="w-5 h-5 text-[#FFD500]"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"
+              >
+              </path>
+            </svg>
+          </div>
+          <span class="text-lg font-semibold text-gray-900">ArchitectureGen</span>
+        </div>
+        <div class="text-gray-600 text-sm">
+          © 2024 ArchitectureGenAI. Powered by GPT-4o-mini & Phoenix LiveView.
+        </div>
+      </div>
     </div>
   </div>
 </div>

@@ -28,21 +28,63 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.TechStackStep do
 
     # Check if deployment_env is "Fly.io"
     if Map.get(tech_stack, "deployment_env") != "Fly.io" do
+      # Save as draft even if validation fails, so user's inputs are preserved
+      Projects.update_tech_stack_config(project, tech_stack)
       {:noreply, put_flash(socket, :error, "Only Fly.io deployment is currently supported.")}
     else
       case Projects.save_tech_stack_config(project, tech_stack) do
         {:ok, updated_project} ->
           # Enqueue the Oban job to generate the architectural plan
-          %{project_id: updated_project.id}
-          |> PlanGenerationWorker.new()
-          |> Oban.insert()
+          case %{project_id: updated_project.id}
+               |> PlanGenerationWorker.new()
+               |> Oban.insert() do
+            {:ok, _job} ->
+              send(self(), {:refresh_project, updated_project.id})
+              {:noreply, socket}
 
-          send(self(), {:refresh_project, updated_project.id})
-          {:noreply, socket}
+            {:error, changeset} ->
+              {:noreply,
+               socket
+               |> put_flash(
+                 :error,
+                 "Failed to enqueue plan generation: #{inspect(changeset.errors)}"
+               )}
+          end
 
         {:error, _changeset} ->
           {:noreply, put_flash(socket, :error, "Failed to save tech stack configuration")}
       end
+    end
+  end
+
+  @impl true
+  def handle_event("go_back", _params, socket) do
+    project = socket.assigns.project
+    tech_stack = socket.assigns.tech_stack
+
+    # Save tech stack as draft before going back so user's inputs are preserved
+    case Projects.update_tech_stack_config(project, tech_stack) do
+      {:ok, updated_project} ->
+        # Now go back to Elicitation
+        case Projects.go_back_to_status(updated_project, "Elicitation") do
+          {:ok, _final_project} ->
+            send(self(), {:refresh_project, updated_project.id})
+            {:noreply, socket}
+
+          {:error, _reason} ->
+            {:noreply, put_flash(socket, :error, "Failed to go back to previous step")}
+        end
+
+      {:error, _changeset} ->
+        # Even if saving draft fails, try to go back anyway
+        case Projects.go_back_to_status(project, "Elicitation") do
+          {:ok, _updated_project} ->
+            send(self(), {:refresh_project, project.id})
+            {:noreply, socket}
+
+          {:error, _reason} ->
+            {:noreply, put_flash(socket, :error, "Failed to go back to previous step")}
+        end
     end
   end
 
@@ -86,7 +128,7 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.TechStackStep do
               The primary language for your application backend.
             </p>
           </div>
-          
+
     <!-- Web Framework -->
           <div class="bg-gradient-to-r from-violet-50 to-blue-50 rounded-lg p-6">
             <label for="web_framework" class="block text-sm font-bold text-slate-900 mb-3">
@@ -104,7 +146,7 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.TechStackStep do
               The web framework for building your application.
             </p>
           </div>
-          
+
     <!-- Database System -->
           <div class="bg-gradient-to-r from-violet-50 to-blue-50 rounded-lg p-6">
             <label for="database_system" class="block text-sm font-bold text-slate-900 mb-3">
@@ -126,7 +168,7 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.TechStackStep do
               Primary database system for data storage.
             </p>
           </div>
-          
+
     <!-- Deployment Environment -->
           <div class="bg-gradient-to-r from-violet-50 to-blue-50 rounded-lg p-6">
             <label for="deployment_env" class="block text-sm font-bold text-slate-900 mb-3">
@@ -150,7 +192,17 @@ defmodule ArchitectureGeneratorWeb.ProjectLive.TechStackStep do
           </div>
         </div>
 
-        <div class="flex items-center justify-end gap-4 mt-8">
+        <div class="flex items-center justify-between gap-4 mt-8">
+          <button
+            type="button"
+            phx-click="go_back"
+            phx-target={@myself}
+            class="px-6 py-3 bg-slate-200 text-slate-700 rounded-xl font-semibold hover:bg-slate-300 transition-all duration-300 flex items-center gap-2"
+          >
+            <.icon name="hero-arrow-left" class="w-5 h-5" />
+            Back to Elicitation
+          </button>
+
           <button
             type="submit"
             disabled={!all_fields_filled?(@tech_stack)}
