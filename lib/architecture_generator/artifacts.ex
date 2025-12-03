@@ -8,6 +8,7 @@ defmodule ArchitectureGenerator.Artifacts do
   alias ArchitectureGenerator.Artifacts.LlmArtifact
 
   @doc """
+
   Returns the list of llm_artifacts for a project.
 
   ## Examples
@@ -56,6 +57,7 @@ defmodule ArchitectureGenerator.Artifacts do
     |> LlmArtifact.create_changeset(attrs)
     |> Repo.insert()
   end
+
 
   @doc """
   Updates a llm_artifact.

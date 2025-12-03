@@ -69,7 +69,15 @@ defmodule ArchitectureGenerator.Workers.PlanGenerationWorker do
   end
 
   defp generate_plan_with_llm(project) do
-    # Build the full project context for the LLM
+    # Workflow:
+    # 1. BRD is stored in project.brd_content (input only, not saved as artifact)
+    # 2. Elicitation data is stored in project.elicitation_data (input only)
+    # 3. Tech stack is stored in project.tech_stack_config (input only)
+    # 4. Build context from all inputs and send to LLM
+    # 5. LLM generates architectural document (output)
+    # 6. Architectural document is saved as artifact (via LLMService.generate_architectural_plan)
+
+    # Build the full project context for the LLM (BRD + Elicitation + Tech Stack)
     context = """
     # Business Requirements Document
     #{project.brd_content || "No BRD provided"}
@@ -97,8 +105,17 @@ defmodule ArchitectureGenerator.Workers.PlanGenerationWorker do
         _ -> :openai
       end
 
-    case LLMService.generate_architectural_plan(context, provider: provider) do
+    # Generate architectural document from BRD + elicitation + tech stack
+    # The LLMService will save the architectural document (not the BRD) as an artifact
+    case LLMService.generate_architectural_plan(context,
+           provider: provider,
+           project_id: project.id,
+           category: "Architectural Document",
+           title: "Architectural Plan: #{project.name}"
+         ) do
       {:ok, plan_content} ->
+        # plan_content is the generated architectural document (12+ pages)
+        # This has already been saved as an artifact by LLMService.generate_architectural_plan
         plan_content
 
       {:error, reason} ->
@@ -266,12 +283,4 @@ defmodule ArchitectureGenerator.Workers.PlanGenerationWorker do
     - **Monitoring**: Centralized logging and distributed tracing
     """
   end
-
-  defp extract_elicitation_value(data, key_variants) when is_map(data) do
-    Enum.find_value(key_variants, "not specified", fn key ->
-      Map.get(data, key)
-    end)
-  end
-
-  defp extract_elicitation_value(_, _), do: "not specified"
 end

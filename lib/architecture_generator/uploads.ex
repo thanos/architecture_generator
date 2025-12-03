@@ -117,7 +117,13 @@ defmodule ArchitectureGenerator.Uploads do
             # Parse first, then enhance with LLM
             case DocumentParser.parse_file(file_path) do
               {:ok, parsed_text} ->
-                case LLMService.enhance_parsed_text(parsed_text, provider: llm_provider) do
+                project_id = attrs[:project_id] || attrs["project_id"]
+                case LLMService.enhance_parsed_text(parsed_text,
+                       provider: llm_provider,
+                       project_id: project_id,
+                       category: "Function Requirement Document",
+                       title: "Enhanced BRD: #{attrs[:filename] || attrs["filename"]}"
+                     ) do
                   {:ok, enhanced_content} ->
                     enhanced_content
 
@@ -140,8 +146,12 @@ defmodule ArchitectureGenerator.Uploads do
           "llm_raw" ->
             # Send raw file to LLM
             filename = attrs[:filename] || attrs["filename"]
+            project_id = attrs[:project_id] || attrs["project_id"]
 
-            case LLMService.convert_document_to_brd(file_binary, filename, provider: llm_provider) do
+            case LLMService.convert_document_to_brd(file_binary, filename,
+                   provider: llm_provider,
+                   project_id: project_id
+                 ) do
               {:ok, brd_content} ->
                 brd_content
 
